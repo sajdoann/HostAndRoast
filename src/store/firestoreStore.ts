@@ -44,8 +44,6 @@ export function createFirestoreStore(): Store {
   const claimSubs = new Map<string, () => void>(); // viewer's claim doc, per season
   const myClaims: Record<string, string> = {}; // seasonId → playerId (current viewer)
   const memberships = new Set<string>(); // seasons the viewer participates in
-  const localGameIds = new Set<string>(); // same-device history (works with no rule)
-  let fsMembershipIds: string[] = []; // from Firestore (cross-device)
   const codeToSeason = new Map<string, string | null>(); // null = not found
   let ownerUnsub: (() => void) | null = null;
   let membershipUnsub: (() => void) | null = null;
@@ -57,33 +55,6 @@ export function createFirestoreStore(): Store {
 
   const onError = (where: string) => (err: unknown) =>
     console.error(`[firestore] ${where} listener failed:`, err);
-
-  // Per-account, same-device record of games participated in. Works even if the
-  // Firestore memberships rule isn't deployed; the Firestore list adds
-  // cross-device coverage on top.
-  const gamesKey = (uid: string) => `hr.games.${uid}`;
-  function loadLocalGames(uid: string): string[] {
-    try {
-      return JSON.parse(localStorage.getItem(gamesKey(uid)) || "[]");
-    } catch {
-      return [];
-    }
-  }
-  function saveLocalGame(uid: string, seasonId: string) {
-    try {
-      const set = new Set(loadLocalGames(uid));
-      set.add(seasonId);
-      localStorage.setItem(gamesKey(uid), JSON.stringify([...set]));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function recomputeMemberships() {
-    memberships.clear();
-    for (const id of localGameIds) memberships.add(id);
-    for (const id of fsMembershipIds) memberships.add(id);
-  }
 
   function rebuild() {
     const seasons: Season[] = [];
@@ -212,15 +183,6 @@ export function createFirestoreStore(): Store {
     void setDoc(doc(fdb, "users", uid, "memberships", seasonId), { seasonId }).catch(
       onError("bindIdentity/membership")
     );
-    // Same-device record so the game shows up in "your seasons" immediately,
-    // regardless of the memberships rule.
-    saveLocalGame(uid, seasonId);
-    if (uid === viewerUid) {
-      localGameIds.add(seasonId);
-      ensureSeason(seasonId);
-      recomputeMemberships();
-      rebuild();
-    }
   }
 
   return {
@@ -250,8 +212,6 @@ export function createFirestoreStore(): Store {
       membershipUnsub?.();
       membershipUnsub = null;
       memberships.clear();
-      localGameIds.clear();
-      fsMembershipIds = [];
       ownerUnsub?.();
       ownerUnsub = null;
       ownerLoaded = false;
@@ -260,19 +220,15 @@ export function createFirestoreStore(): Store {
         rebuild();
         return;
       }
-      // Seed from same-device history first (no rule required).
-      for (const sid of loadLocalGames(uid)) {
-        localGameIds.add(sid);
-        ensureSeason(sid);
-      }
-      recomputeMemberships();
-      // Then merge in the Firestore list for cross-device participation.
+      // Seasons the viewer participates in (claimed or rated while signed in).
       membershipUnsub = onSnapshot(
         collection(fdb, "users", uid, "memberships"),
         (snap) => {
-          fsMembershipIds = snap.docs.map((d) => d.id);
-          fsMembershipIds.forEach((id) => ensureSeason(id));
-          recomputeMemberships();
+          memberships.clear();
+          snap.docs.forEach((d) => {
+            memberships.add(d.id);
+            ensureSeason(d.id);
+          });
           rebuild();
         },
         onError("memberships")
