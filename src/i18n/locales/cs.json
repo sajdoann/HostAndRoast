@@ -32,6 +32,10 @@
     "ctaJoin": "Připojit se k večeři",
     "codePlaceholder": "Zadejte kód",
     "codeGo": "Jít",
+    "yourSeasons": "Vaše sezóny",
+    "playerCount": "{n} hráčů",
+    "sealed": "Zapečetěno",
+    "ready": "Výsledky připraveny",
     "stepsTitle": "Jak to funguje",
     "steps": {
       "createTitle": "1 · Vytvořte",

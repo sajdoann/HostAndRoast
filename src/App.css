@@ -141,6 +141,31 @@
   font-size: 0.85rem;
 }
 
+.section-alt {
+  background: var(--cream);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Your seasons */
+.season-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+.season-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  transition: border-color 0.12s ease;
+}
+.season-tile:hover {
+  border-color: var(--gold);
+}
+
 /* Steps */
 .steps-grid {
   display: grid;

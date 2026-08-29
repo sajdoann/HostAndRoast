@@ -32,6 +32,10 @@
     "ctaJoin": "Join a dinner",
     "codePlaceholder": "Enter code",
     "codeGo": "Go",
+    "yourSeasons": "Your seasons",
+    "playerCount": "{n} players",
+    "sealed": "Sealed",
+    "ready": "Results ready",
     "stepsTitle": "How it works",
     "steps": {
       "createTitle": "1 · Create",

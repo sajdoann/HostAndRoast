@@ -2,11 +2,14 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import Logo from "../components/Logo";
+import { useDB } from "../store/hooks";
+import { revealStatus } from "../domain/reveal";
 
 export default function Home() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
+  const { seasons, ratings } = useDB();
 
   const steps = ["create", "host", "reveal"] as const;
 
@@ -43,6 +46,35 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {seasons.length > 0 && (
+        <section className="section section-alt">
+          <div className="container">
+            <h2 className="section-title">{t("home.yourSeasons")}</h2>
+            <div className="season-list">
+              {[...seasons]
+                .sort((a, b) => b.createdAt - a.createdAt)
+                .map((season) => {
+                  const ready = revealStatus(season, ratings).revealed;
+                  return (
+                    <Link key={season.id} to={`/season/${season.id}`} className="card season-tile">
+                      <div>
+                        <strong>{season.name}</strong>
+                        <span className="muted small">
+                          {" · "}
+                          {t("home.playerCount", { n: season.players.length })}
+                        </span>
+                      </div>
+                      <span className={`pill ${ready ? "pill-complete" : ""}`}>
+                        {ready ? `✅ ${t("home.ready")}` : `🔒 ${t("home.sealed")}`}
+                      </span>
+                    </Link>
+                  );
+                })}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <div className="container">
