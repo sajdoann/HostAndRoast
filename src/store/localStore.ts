@@ -1,4 +1,5 @@
 import type { JoinTarget, Rating, Season } from "../domain/types";
+import { computeLeaderboard } from "../domain/scoring";
 import type { DB, Store } from "./types";
 
 /**
@@ -78,6 +79,11 @@ function createLocalStore(): Store {
     addRating(rating: Rating) {
       if (state.ratings.some((r) => r.id === rating.id)) return; // one per event+rater
       commit({ ...state, ratings: [...state.ratings, rating] });
+    },
+
+    getResults(seasonId: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      return season ? computeLeaderboard(season, state.ratings) : null;
     },
   };
 }

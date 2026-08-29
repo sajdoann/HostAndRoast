@@ -1,8 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
+import { store } from "../store";
 import { useSeason, useSeasonRatings } from "../store/hooks";
 import { revealStatus } from "../domain/reveal";
-import { computeLeaderboard, MAX_TOTAL } from "../domain/scoring";
+import { MAX_TOTAL } from "../domain/scoring";
 import { CATEGORIES } from "../domain/categories";
 
 export default function Results() {
@@ -56,7 +57,24 @@ export default function Results() {
     );
   }
 
-  const board = computeLeaderboard(season, ratings);
+  const board = store.getResults(season.id);
+
+  // Firestore mode: revealed, but the Cloud Function hasn't published yet.
+  if (board === null) {
+    return (
+      <section className="section">
+        <div className="container center-narrow">
+          <div className="lock-badge">⏳</div>
+          <h1 className="section-title">{t("results.title")}</h1>
+          <p className="muted">{t("results.preparing")}</p>
+          <Link to={`/season/${season.id}`} className="btn btn-ghost btn-sm">
+            {t("common.back")}
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   const topTotal = board[0]?.total ?? 0;
 
   return (

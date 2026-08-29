@@ -15,4 +15,9 @@ export const firebaseConfig = {
 
 export const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
-export const isConfigured = Boolean(firebaseConfig.projectId);
+/**
+ * Whether Firebase is configured. When true the app talks to Firestore
+ * (multi-device, real QR joins); when false it falls back to localStorage.
+ * VITE_ env vars are inlined at build time, so this is statically known.
+ */
+export const firebaseEnabled = Boolean(firebaseConfig.projectId);

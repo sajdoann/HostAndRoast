@@ -1,11 +1,12 @@
 import { localStore } from "./localStore";
+import { createFirestoreStore } from "./firestoreStore";
+import { firebaseEnabled } from "../lib/config";
 import type { Store } from "./types";
 
 /**
- * The active store. To move to Firebase, implement a firestoreStore that
- * satisfies Store and swap the line below — nothing else in the app changes.
- * TODO(firebase): const store: Store = firestoreStore;
+ * The active store. Auto-selects Firestore when Firebase is configured
+ * (.env.local), otherwise falls back to localStorage so the app always runs.
  */
-export const store: Store = localStore;
+export const store: Store = firebaseEnabled ? createFirestoreStore() : localStore;
 
 export type { Store, DB } from "./types";

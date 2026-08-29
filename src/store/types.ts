@@ -1,4 +1,5 @@
 import type { JoinTarget, Rating, Season } from "../domain/types";
+import type { HostResult } from "../domain/scoring";
 
 export interface DB {
   seasons: Season[];
@@ -28,4 +29,12 @@ export interface Store {
 
   /** Record a guest's rating. Ignores duplicates (one per event+rater). */
   addRating(rating: Rating): void;
+
+  /**
+   * The leaderboard for a season, or null if it isn't available yet.
+   * Local mode computes it from the ratings it holds; Firestore mode returns
+   * the results a Cloud Function publishes once the reveal condition is met
+   * (clients can't read raw scores, so they can't compute it themselves).
+   */
+  getResults(seasonId: string): HostResult[] | null;
 }

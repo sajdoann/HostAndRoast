@@ -7,13 +7,20 @@
  * src/domain/{reveal,scoring}.ts here — it has no browser dependencies.
  *
  *   publishResults  — callable/scheduled: if revealStatus(...).revealed, compute
- *                     the leaderboard and write /results/{seasonId}.
+ *                     the leaderboard and write /results/{seasonId} as
+ *                     { board: HostResult[], publishedAt } — the exact shape
+ *                     the web app's Firestore store reads back (see
+ *                     src/store/firestoreStore.ts).
+ *
+ * Reveal counting can use the public /receipts (no scores); the board itself
+ * is computed from /ratings, which only admin (this Function) can read.
  *
  * TODO(functions):
  *   1. Share the domain logic (copy src/domain or extract a small package).
  *   2. Implement publishResults (a scheduled sweep and/or an onWrite trigger
  *      on ratings that checks the reveal condition).
- *   3. Optional: notify the organizer when results unlock.
+ *   3. Optional: notify the organizer when results unlock; clean up
+ *      subcollections when a season is deleted.
  */
 
 import * as admin from "firebase-admin";

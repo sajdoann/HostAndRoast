@@ -1,22 +1,21 @@
 /**
- * Firebase initialization — placeholder.
+ * Firebase initialization.
  *
- * TODO(firebase):
- *   1. npm install firebase
- *   2. Uncomment the code below.
- *   3. Fill in .env.local from .env.example.
- *
- * Keeping this isolated means the rest of the app imports { auth, db }
- * from one place and never touches the SDK directly.
+ * Guarded so the app runs with no config at all (localStorage mode): `db` is
+ * null until you fill in .env.local (see .env.example). We only pull in
+ * Firestore here — organizer auth is a later phase (see ROADMAP).
  */
 
-// import { initializeApp } from "firebase/app";
-// import { getAuth } from "firebase/auth";
-// import { getFirestore } from "firebase/firestore";
-// import { firebaseConfig } from "./config";
-//
-// const app = initializeApp(firebaseConfig);
-// export const auth = getAuth(app);
-// export const db = getFirestore(app);
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { firebaseConfig, firebaseEnabled } from "./config";
 
-export {};
+let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
+
+if (firebaseEnabled) {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+}
+
+export { app, db };

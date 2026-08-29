@@ -12,23 +12,28 @@ to a shared backend is additive and isolated — grep for `TODO(...)`.
   deadline) and a per-host leaderboard.
 - Pure domain logic in `src/domain`, persistence behind a `Store` interface.
 
-## Phase 1 — Firebase (make it multi-device)  → `store/`, `TODO(firebase)`
+## ✅ Phase 1 — Firebase wiring (done; needs your keys to switch on)
 
-Right now each browser has its own localStorage. To let a host's QR reach real
-guests' phones, data must be shared.
+`firebase` is installed and `src/store/firestoreStore.ts` implements the same
+`Store` interface as localStorage, using real-time `onSnapshot` listeners.
+`src/store/index.ts` **auto-selects** it when Firebase is configured, else falls
+back to localStorage — so the app always runs.
 
-1. `npm install firebase`; fill `.env.local` from `.env.example`; uncomment
-   `src/lib/firebase.ts`.
-2. Write `src/store/firestoreStore.ts` implementing `Store` against Firestore:
-   - `seasons/{id}` — season doc (players, events, revealAt).
-   - `seasons/{id}/ratings/{eventId_raterId}` — one doc per submission.
-3. Point `src/store/index.ts` at it. **Nothing else changes** — pages use hooks,
-   hooks use the store.
+**To switch it on:** create a Firebase project, enable Firestore, then copy the
+web config into `.env.local` (see `.env.example`). That's it — no code change.
+Each browser has its own localStorage today; once Firebase is on, a host's QR
+reaches real guests' phones.
 
 **Data model** (mirrors `src/domain/types.ts`)
 
-- `seasons/{id}` → `{ name, players[], events[], revealAt, createdAt }`
-- `seasons/{id}/ratings/{eventId_raterId}` → `{ eventId, raterId, scores, comment, createdAt }`
+- `seasons/{id}` → `{ name, players[], events[], revealAt?, createdAt }`
+- `seasons/{id}/ratings/{eventId_raterId}` → `{ eventId, raterId, scores, comment, createdAt }` — **read-never**
+- `seasons/{id}/receipts/{eventId_raterId}` → `{ eventId, raterId, createdAt }` — public, no scores; drives progress + reveal
+- `results/{seasonId}` → `{ board: HostResult[], publishedAt }` — written by the Function on reveal
+
+Ratings + receipts are written together in one batch (deterministic id →
+write-once). The client can count who rated and show the final board without
+ever reading a raw score.
 
 ## Phase 2 — Security rules (keep scores sealed)  → `firestore.rules`
 
@@ -44,8 +49,10 @@ Because clients can't read ratings, the leaderboard is computed server-side.
 1. Reuse `src/domain/reveal.ts` + `scoring.ts` inside `functions/`.
 2. Implement `publishResults` (scheduled sweep and/or `onWrite` on ratings):
    when `revealStatus(season, ratings).revealed`, compute the board and write
-   `results/{seasonId}` (the one doc clients may read).
-3. Point `Results.tsx` at `results/{seasonId}` instead of computing locally.
+   `results/{seasonId}` as `{ board, publishedAt }`.
+3. **Already wired:** `Results.tsx` reads `store.getResults(seasonId)`, which in
+   Firestore mode returns that published doc (and shows a "tallying…" state
+   until the Function writes it). Local mode computes it directly.
 
 ## Phase 4 — Optional extras
 
