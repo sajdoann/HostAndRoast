@@ -1,18 +1,37 @@
 # Host & Roast · Host je skvost 🍗
 
-Book a seat at a real roast dinner. Local hosts open their tables; guests bring
-their appetite. A minimalist, modular scaffold — bilingual (English 🇬🇧 /
-Čeština 🇨🇿) and ready for Firebase, Stripe, and Cloud Functions.
+A **Prostřeno! / "Come Dine With Me"** style dinner game for a group of friends.
+Everyone takes a turn hosting; guests rate each dinner on food, hospitality and
+entertainment; scores stay **sealed** until the whole season is done — then the
+leaderboard is revealed.
+
+Minimalist, modular, bilingual (English 🇬🇧 / Čeština 🇨🇿). It runs **end-to-end
+today on localStorage** with no backend, and is wired for Firebase to drop in
+behind a single seam.
+
+## How the game works
+
+1. **Organizer creates a season** — adds the players and a round-robin schedule
+   (one host per date).
+2. **Each dinner is an event** with a short join code + QR the host shows on the day.
+3. **Guests join with no signup** — scan the QR, pick their name, score
+   food / hospitality / entertainment (1–10) with an optional comment.
+   The host never rates their own dinner.
+4. **Scores are hidden from everyone**, including the organizer, until the reveal
+   condition is met: every dinner has passed *and* all ratings are in — or a
+   deadline lapses, so one missing guest can't hold the game hostage.
+5. **Reveal** shows a leaderboard of per-host averages and totals.
+
+**No duplicate votes without login:** one submission per name per device
+(localStorage flag) *and* one rating per name per dinner (deterministic id), and
+a dinner's QR closes once every expected guest has voted.
 
 ## Stack
 
-- **Vite + React + TypeScript** — fast, small, no framework lock-in.
-- **react-router-dom** — a handful of pages.
-- **Custom i18n** — dependency-free, JSON locale files (`src/i18n/locales`).
-- **Plain CSS** — brand tokens in `src/theme.css` (gold on ink & cream, from the logo).
-
-Integrations (Firebase / Stripe / Functions) are **stubbed but wired up** —
-drop in keys and uncomment. See [ROADMAP.md](./ROADMAP.md).
+- **Vite + React + TypeScript** — small, no framework lock-in.
+- **react-router-dom** — the flows below.
+- **Custom i18n** — dependency-free JSON locales (`src/i18n/locales`).
+- **qrcode** — QR codes for join links. Plain CSS, brand tokens from the logo.
 
 ## Getting started
 
@@ -21,41 +40,46 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`.
+Try it: create a season, open a dinner's host view (`/event/:id`), scan or open
+its `/join/:code` link in another tab to rate. Also: `npm run build`,
+`npm run typecheck`.
 
-## Project structure
+## Routes
+
+| Route | Who | What |
+| --- | --- | --- |
+| `/` | anyone | Landing + join-by-code |
+| `/new` | organizer | Create a season (players, schedule, deadline) |
+| `/season/:id` | organizer | Schedule, per-dinner status, reveal banner |
+| `/event/:id` | host | The QR + code to show on the day |
+| `/join/:code` | guest | Pick name → rate → sealed |
+| `/season/:id/results` | anyone | Leaderboard (locked until reveal) |
+
+## Structure
 
 ```
 src/
-  main.tsx            App bootstrap (router + i18n providers)
-  App.tsx             Routes
-  theme.css           Brand tokens
-  index.css           Base styles + primitives (.btn, .card, .container)
-  App.css             Layout & component styles
-  i18n/
-    index.tsx         Tiny i18n provider + useI18n() hook
-    locales/          en.json, cs.json
-  components/         Header, Footer, Layout, LanguageSwitcher, DinnerCard
-  pages/              Home, Dinners, Host, NotFound
-  data/dinners.ts     Mock data (→ Firestore later)
-  lib/
-    config.ts         Reads VITE_ env vars
-    firebase.ts       Firebase init (placeholder)
-    stripe.ts         Stripe client (placeholder)
+  domain/        Pure game logic (no React) — reused by future Cloud Functions
+    types.ts       Season, DinnerEvent, Rating, Player
+    schedule.ts    Round-robin schedule builder
+    reveal.ts      Reveal condition + per-event completion
+    scoring.ts     Leaderboard computation
+    categories.ts  Rating categories + score bounds
+  store/         Persistence seam
+    types.ts       Store interface
+    localStore.ts  localStorage implementation (pub/sub)
+    hooks.ts       React hooks (useSeason, useSeasonRatings, …)
+    index.ts       The active store — swap here for Firestore
+  i18n/          Tiny provider + en.json / cs.json
+  components/    Header, Footer, QRCode, ScoreSlider, CopyLink, …
+  pages/         Home, NewSeason, Season, EventDay, Join, Results, NotFound
+  lib/           config, voteGuard, firebase (stub), stripe (optional stub)
 
-functions/            Cloud Functions (Stripe checkout & webhooks) — placeholder
-firestore.rules       Starter security rules
-firebase.json         Hosting + Firestore + Functions + emulators config
-.env.example          Copy to .env.local
+functions/       Cloud Functions — compute & publish the leaderboard on reveal
+firestore.rules  Ratings are write-once, read-never (this is the score-hiding)
 ```
-
-## Adding a language
-
-1. Add `src/i18n/locales/<code>.json` (copy `en.json`, translate).
-2. Register it in `src/i18n/index.tsx` (`LANGUAGES` + `DICTIONARIES`).
-3. Add a label in `LanguageSwitcher.tsx`.
 
 ## Next steps
 
-See [ROADMAP.md](./ROADMAP.md) for the Firebase, Stripe, rules, and Functions plan.
-Every integration point is marked with a `TODO(...)` comment in the code.
+See [ROADMAP.md](./ROADMAP.md). The move to Firebase touches only `store/` and
+the `lib/firebase.ts` stub — the domain logic and UI stay as they are.

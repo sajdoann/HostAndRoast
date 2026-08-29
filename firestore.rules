@@ -1,38 +1,44 @@
 rules_version = '2';
 
-// Host & Roast — starter security rules.
-// TODO(rules): tighten before launch. These cover the core model:
-//   dinners (public read, host-owned write) and bookings (owner/host read).
+// Host & Roast — starter security rules for the rating game.
+//
+// The core rule: raw ratings are NEVER readable by clients — not even the
+// organizer — so scores stay sealed. A Cloud Function computes the leaderboard
+// and writes it to /results/{seasonId} only once the reveal condition is met.
+// TODO(rules): tighten season writes once organizer auth exists (see ROADMAP).
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
+    function scores() {
+      return request.resource.data.scores;
+    }
+    function validScore(v) {
+      return v is int && v >= 1 && v <= 10;
     }
 
-    function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
-    }
-
-    // Dinners are publicly browsable; only the host may create/edit their own.
-    match /dinners/{dinnerId} {
+    // Season doc: schedule, players and public join codes.
+    // Publicly readable so guests can join by code without an account.
+    match /seasons/{seasonId} {
       allow read: if true;
-      allow create: if isOwner(request.resource.data.hostId);
-      allow update, delete: if isOwner(resource.data.hostId);
+      // TODO(auth): restrict to the organizer. Open for the no-backend prototype.
+      allow write: if true;
+
+      // Ratings live in a subcollection and are write-once, read-never.
+      // Deterministic id "<eventId>_<raterId>" makes a second submission an
+      // update, which is denied → one rating per guest per dinner.
+      match /ratings/{ratingId} {
+        allow read: if false;
+        allow create: if validScore(scores().food)
+                      && validScore(scores().atmosphere)
+                      && validScore(scores().entertainment);
+        allow update, delete: if false;
+      }
     }
 
-    // Bookings are private to the guest who made them and the host of the dinner.
-    // Writes are done server-side by Cloud Functions after payment — deny direct writes.
-    match /bookings/{bookingId} {
-      allow read: if isOwner(resource.data.guestId)
-                  || isOwner(resource.data.hostId);
+    // Published leaderboard — exists only after reveal, written by a Function.
+    match /results/{seasonId} {
+      allow read: if true;
       allow write: if false;
-    }
-
-    // User profiles: readable by anyone, writable only by the owner.
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if isOwner(userId);
     }
   }
 }

@@ -1,36 +1,35 @@
 /**
  * Cloud Functions for Host & Roast — placeholder.
  *
- * The booking + payment flow lives here so secret keys never touch the client:
+ * Because raw ratings are never client-readable (see firestore.rules), the
+ * leaderboard is computed server-side and published only once the season's
+ * reveal condition is met. Reuse the pure logic from the web app's
+ * src/domain/{reveal,scoring}.ts here — it has no browser dependencies.
  *
- *   createCheckoutSession  — guest books a seat → creates a Stripe Checkout session.
- *   stripeWebhook          — Stripe confirms payment → write the booking to Firestore,
- *                            decrement the dinner's seatsLeft.
+ *   publishResults  — callable/scheduled: if revealStatus(...).revealed, compute
+ *                     the leaderboard and write /results/{seasonId}.
  *
  * TODO(functions):
- *   1. cd functions && npm install stripe
- *   2. firebase functions:config:set stripe.secret="sk_..." stripe.webhook="whsec_..."
- *   3. Implement the two handlers below and remove this notice.
+ *   1. Share the domain logic (copy src/domain or extract a small package).
+ *   2. Implement publishResults (a scheduled sweep and/or an onWrite trigger
+ *      on ratings that checks the reveal condition).
+ *   3. Optional: notify the organizer when results unlock.
  */
 
 import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
-// import { onCall } from "firebase-functions/v2/https";
-// import { onRequest } from "firebase-functions/v2/https";
-// import Stripe from "stripe";
+// import { onSchedule } from "firebase-functions/v2/scheduler";
+// import { revealStatus } from "./domain/reveal";
+// import { computeLeaderboard } from "./domain/scoring";
 //
-// export const createCheckoutSession = onCall(async (request) => {
-//   // 1. Validate the dinner + seat availability.
-//   // 2. Create a Stripe Checkout session for the seat price.
-//   // 3. Return the session id / url to the client.
-// });
-//
-// export const stripeWebhook = onRequest(async (req, res) => {
-//   // 1. Verify the Stripe signature.
-//   // 2. On checkout.session.completed, write the booking + decrement seats.
-//   res.sendStatus(200);
+// export const publishResults = onSchedule("every 6 hours", async () => {
+//   const db = admin.firestore();
+//   const seasons = await db.collection("seasons").get();
+//   for (const doc of seasons.docs) {
+//     // load ratings, check revealStatus, and write /results/{id} when revealed.
+//   }
 // });
 
 export {};

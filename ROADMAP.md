@@ -1,53 +1,60 @@
 # Roadmap
 
-The scaffold ships a working, bilingual front end with mock data. Each phase
-below is self-contained — pick one up when you're ready. Grep for `TODO(...)`
-to find the exact spot in the code.
+The scaffold is a fully working, bilingual game backed by localStorage. Moving
+to a shared backend is additive and isolated — grep for `TODO(...)`.
 
-## ✅ Phase 0 — Scaffold (done)
+## ✅ Phase 0 — Playable prototype (done)
 
-- Vite + React + TypeScript app, modular structure.
-- Bilingual EN/CS with a tiny custom i18n.
-- Brand styling from the logo (gold on ink & cream).
-- Pages: Home, Dinners, Host, 404.
-- Placeholders for Firebase, Stripe, Functions, and Firestore rules.
+- Season creation, round-robin schedule, per-dinner QR/join codes.
+- No-signup guest rating (name pick + 3 categories + comment).
+- Duplicate-vote guards (per device + one per name per dinner).
+- Sealed scores with the reveal condition (all dinners done + all ratings, or a
+  deadline) and a per-host leaderboard.
+- Pure domain logic in `src/domain`, persistence behind a `Store` interface.
 
-## Phase 1 — Firebase Auth & Firestore  → `TODO(firebase)`, `TODO(auth)`
+## Phase 1 — Firebase (make it multi-device)  → `store/`, `TODO(firebase)`
 
-1. `npm install firebase`.
-2. Create a Firebase project; copy web config into `.env.local` (see `.env.example`).
-3. Uncomment `src/lib/firebase.ts` to export `auth` and `db`.
-4. Add an `AuthProvider` (context) exposing the current user; wire the
-   **Sign in** button in `Header.tsx`.
-5. Replace `src/data/dinners.ts` mock with a Firestore query on `dinners`.
+Right now each browser has its own localStorage. To let a host's QR reach real
+guests' phones, data must be shared.
 
-**Model**
+1. `npm install firebase`; fill `.env.local` from `.env.example`; uncomment
+   `src/lib/firebase.ts`.
+2. Write `src/store/firestoreStore.ts` implementing `Store` against Firestore:
+   - `seasons/{id}` — season doc (players, events, revealAt).
+   - `seasons/{id}/ratings/{eventId_raterId}` — one doc per submission.
+3. Point `src/store/index.ts` at it. **Nothing else changes** — pages use hooks,
+   hooks use the store.
 
-- `dinners/{id}` — `{ hostId, title, city, date, pricePerSeat, currency, seatsLeft, image }`
-- `bookings/{id}` — `{ dinnerId, guestId, hostId, seats, status, createdAt }`
-- `users/{uid}` — `{ displayName, isHost }`
+**Data model** (mirrors `src/domain/types.ts`)
 
-## Phase 2 — Firestore security rules  → `firestore.rules`
+- `seasons/{id}` → `{ name, players[], events[], revealAt, createdAt }`
+- `seasons/{id}/ratings/{eventId_raterId}` → `{ eventId, raterId, scores, comment, createdAt }`
 
-- `firestore.rules` already encodes the model above (public dinners,
-  host-owned writes, private bookings written server-side only).
-- Test with the emulator, then `firebase deploy --only firestore:rules`.
+## Phase 2 — Security rules (keep scores sealed)  → `firestore.rules`
 
-## Phase 3 — Stripe payments  → `TODO(stripe)`
+Already written. The important property: **ratings are `read: false`** for all
+clients, and write-once via the deterministic id. Test with the emulator, then
+`firebase deploy --only firestore:rules`. Tighten `seasons` writes once
+organizer auth exists.
 
-1. Client: `npm install @stripe/stripe-js`; uncomment `src/lib/stripe.ts`.
-2. Booking flow: `DinnerCard` **Book** → call the `createCheckoutSession`
-   Cloud Function → `redirectToCheckout`.
-3. Put the publishable key in `.env.local`; the **secret** key stays in Functions.
+## Phase 3 — Reveal & leaderboard function  → `functions/`, `TODO(functions)`
 
-## Phase 4 — Cloud Functions  → `TODO(functions)`, `functions/src/index.ts`
+Because clients can't read ratings, the leaderboard is computed server-side.
 
-1. `cd functions && npm install stripe`.
-2. `firebase functions:config:set stripe.secret="sk_..." stripe.webhook="whsec_..."`.
-3. Implement:
-   - `createCheckoutSession` — validate seats, create the Stripe session.
-   - `stripeWebhook` — on `checkout.session.completed`, write the booking and
-     decrement `seatsLeft` (this is why booking writes are denied in the rules).
+1. Reuse `src/domain/reveal.ts` + `scoring.ts` inside `functions/`.
+2. Implement `publishResults` (scheduled sweep and/or `onWrite` on ratings):
+   when `revealStatus(season, ratings).revealed`, compute the board and write
+   `results/{seasonId}` (the one doc clients may read).
+3. Point `Results.tsx` at `results/{seasonId}` instead of computing locally.
+
+## Phase 4 — Optional extras
+
+- **Organizer auth** (Firebase Auth) so only the creator edits a season.
+- **Notifications** when results unlock (email / push via a Function).
+- **QR invalidation** server-side once a dinner is complete (already reflected
+  in the UI; enforce in rules/functions).
+- **Stripe** (`src/lib/stripe.ts`) — only if you add a paid tier; otherwise delete it.
+- Richer stats: per-category winners, comments digest, tie-breakers.
 
 ## Phase 5 — Deploy
 
@@ -56,4 +63,4 @@ npm run build
 firebase deploy   # hosting + rules + functions
 ```
 
-Local end-to-end: `firebase emulators:start` (config already in `firebase.json`).
+Local end-to-end with the emulator suite: `firebase emulators:start`.

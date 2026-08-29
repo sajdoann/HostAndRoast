@@ -1,13 +1,12 @@
 /**
- * Stripe (client) — placeholder.
+ * Stripe (client) — OPTIONAL placeholder.
  *
- * TODO(stripe):
+ * The core game needs no payments. Keep this only if you add a paid tier
+ * (e.g. larger seasons, custom branding). If not, this file can be deleted.
+ *
+ * TODO(stripe, optional):
  *   1. npm install @stripe/stripe-js
- *   2. Uncomment below.
- *   3. Booking flow: call the "createCheckoutSession" Cloud Function
- *      (see functions/src/index.ts), then redirect with stripe.redirectToCheckout.
- *
- * The secret key lives ONLY in Cloud Functions — never in the client.
+ *   2. Charge via a Cloud Function; the secret key never touches the client.
  */
 
 // import { loadStripe } from "@stripe/stripe-js";
