@@ -1,4 +1,4 @@
-import { NavLink, Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useI18n } from "../i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
 
@@ -13,15 +13,11 @@ export default function Header() {
           <span className="brand-name">{t("brand.name")}</span>
         </Link>
 
-        <nav className="site-nav">
-          <NavLink to="/dinners">{t("nav.dinners")}</NavLink>
-          <NavLink to="/host">{t("nav.host")}</NavLink>
-        </nav>
-
         <div className="header-actions">
+          <NavLink to="/new" className="btn btn-primary btn-sm">
+            + {t("nav.new")}
+          </NavLink>
           <LanguageSwitcher />
-          {/* TODO(auth): wire to Firebase Auth. */}
-          <button className="btn btn-ghost">{t("nav.signIn")}</button>
         </div>
       </div>
     </header>

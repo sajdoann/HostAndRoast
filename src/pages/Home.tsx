@@ -1,13 +1,19 @@
-import { Link } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
-import DinnerCard from "../components/DinnerCard";
-import { DINNERS } from "../data/dinners";
 
 export default function Home() {
   const { t } = useI18n();
-  const featured = DINNERS.slice(0, 3);
+  const navigate = useNavigate();
+  const [code, setCode] = useState("");
 
-  const steps = ["browse", "book", "feast"] as const;
+  const steps = ["create", "host", "reveal"] as const;
+
+  function join(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = code.trim().toUpperCase();
+    if (trimmed) navigate(`/join/${trimmed}`);
+  }
 
   return (
     <>
@@ -17,12 +23,21 @@ export default function Home() {
           <h1 className="hero-title">{t("home.title")}</h1>
           <p className="hero-subtitle">{t("home.subtitle")}</p>
           <div className="hero-actions">
-            <Link to="/dinners" className="btn btn-primary">
+            <Link to="/new" className="btn btn-primary">
               {t("home.ctaPrimary")}
             </Link>
-            <Link to="/host" className="btn btn-ghost">
-              {t("home.ctaSecondary")}
-            </Link>
+            <form className="join-inline" onSubmit={join}>
+              <input
+                aria-label={t("home.codePlaceholder")}
+                placeholder={t("home.codePlaceholder")}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                maxLength={6}
+              />
+              <button className="btn btn-ghost" type="submit">
+                {t("home.codeGo")}
+              </button>
+            </form>
           </div>
         </div>
       </section>
@@ -36,17 +51,6 @@ export default function Home() {
                 <h3>{t(`home.steps.${step}Title`)}</h3>
                 <p className="muted">{t(`home.steps.${step}Body`)}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section section-alt">
-        <div className="container">
-          <h2 className="section-title">{t("home.featuredTitle")}</h2>
-          <div className="dinner-grid">
-            {featured.map((dinner) => (
-              <DinnerCard key={dinner.id} dinner={dinner} />
             ))}
           </div>
         </div>

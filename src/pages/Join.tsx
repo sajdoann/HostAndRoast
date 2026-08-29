@@ -1,0 +1,155 @@
+import { useMemo, useState, type ReactNode } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useI18n } from "../i18n";
+import { store } from "../store";
+import { useDB } from "../store/hooks";
+import ScoreSlider from "../components/ScoreSlider";
+import { CATEGORIES } from "../domain/categories";
+import { isEventComplete, ratingsForEvent } from "../domain/reveal";
+import { hasVoted, markVoted } from "../lib/voteGuard";
+import type { CategoryId } from "../domain/types";
+
+function centre(children: ReactNode) {
+  return (
+    <section className="section">
+      <div className="container center-narrow">{children}</div>
+    </section>
+  );
+}
+
+export default function Join() {
+  const { t } = useI18n();
+  const { code } = useParams();
+  const { seasons, ratings } = useDB();
+
+  const target = useMemo(() => store.findByCode(code ?? ""), [code, seasons]);
+  const [raterId, setRaterId] = useState<string | null>(null);
+  const [scores, setScores] = useState<Record<CategoryId, number>>({
+    food: 5,
+    atmosphere: 5,
+    entertainment: 5,
+  });
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  if (!target) {
+    return centre(
+      <>
+        <h1 className="section-title">{t("join.notFoundTitle")}</h1>
+        <p className="muted">{t("join.notFoundBody")}</p>
+        <Link to="/" className="btn btn-primary">
+          {t("notFound.back")}
+        </Link>
+      </>
+    );
+  }
+
+  const { season, event } = target;
+  const host = season.players.find((p) => p.id === event.hostId);
+
+  if (submitted) {
+    return centre(
+      <>
+        <h1 className="section-title">{t("join.thanksTitle")}</h1>
+        <p className="muted">{t("join.thanksBody")}</p>
+      </>
+    );
+  }
+
+  if (isEventComplete(event, season, ratings)) {
+    return centre(
+      <>
+        <h1 className="section-title">{t("join.closedTitle")}</h1>
+        <p className="muted">{t("join.closedBody")}</p>
+      </>
+    );
+  }
+
+  if (hasVoted(event.id)) {
+    return centre(
+      <>
+        <h1 className="section-title">{t("join.thanksTitle")}</h1>
+        <p className="muted">{t("join.alreadyVotedDevice")}</p>
+      </>
+    );
+  }
+
+  const ratedIds = new Set(ratingsForEvent(event, ratings).map((r) => r.raterId));
+
+  // Name picker
+  if (!raterId) {
+    return centre(
+      <>
+        <p className="eyebrow">{t("event.hostedBy", { host: host?.name ?? "—" })}</p>
+        <h1 className="section-title">{t("join.pickName")}</h1>
+        <p className="muted">{t("join.pickHelp")}</p>
+        <p className="muted small">{t("join.hostNote", { host: host?.name ?? "—" })}</p>
+        <div className="name-list">
+          {season.players
+            .filter((p) => p.id !== event.hostId)
+            .map((p) => {
+              const already = ratedIds.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="name-btn"
+                  disabled={already}
+                  onClick={() => setRaterId(p.id)}
+                >
+                  {p.name}
+                  {already && <span className="muted small"> · {t("join.alreadyVotedName")}</span>}
+                </button>
+              );
+            })}
+        </div>
+      </>
+    );
+  }
+
+  function submit() {
+    if (!raterId) return;
+    store.addRating({
+      id: `${event.id}_${raterId}`,
+      eventId: event.id,
+      raterId,
+      scores,
+      comment: comment.trim() || undefined,
+      createdAt: Date.now(),
+    });
+    markVoted(event.id, season.players.find((p) => p.id === raterId)?.name ?? "");
+    setSubmitted(true);
+  }
+
+  return centre(
+    <>
+      <h1 className="section-title">{t("join.rateTitle", { host: host?.name ?? "—" })}</h1>
+      <p className="muted small">{t("join.scoreHelp")}</p>
+
+      <div className="rate-form">
+        {CATEGORIES.map((cat) => (
+          <ScoreSlider
+            key={cat}
+            label={t(`categories.${cat}`)}
+            value={scores[cat]}
+            onChange={(v) => setScores((s) => ({ ...s, [cat]: v }))}
+          />
+        ))}
+
+        <label className="field">
+          <span>{t("join.commentLabel")}</span>
+          <textarea
+            rows={3}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={t("join.commentPlaceholder")}
+          />
+        </label>
+
+        <button type="button" className="btn btn-primary" onClick={submit}>
+          {t("join.submit")}
+        </button>
+      </div>
+    </>
+  );
+}

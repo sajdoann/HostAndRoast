@@ -1,0 +1,131 @@
+import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { useI18n } from "../i18n";
+import { store } from "../store";
+import { genId } from "../domain/ids";
+import { buildSchedule, todayISO } from "../domain/schedule";
+import type { Player, Season } from "../domain/types";
+
+export default function NewSeason() {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+
+  const [name, setName] = useState("");
+  const [names, setNames] = useState<string[]>(["", ""]);
+  const [startDate, setStartDate] = useState(todayISO());
+  const [interval, setInterval] = useState(7);
+  const [deadline, setDeadline] = useState("");
+  const [error, setError] = useState("");
+
+  function setNameAt(i: number, value: string) {
+    setNames((prev) => prev.map((n, idx) => (idx === i ? value : n)));
+  }
+  function addPlayer() {
+    setNames((prev) => [...prev, ""]);
+  }
+  function removePlayer(i: number) {
+    setNames((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const clean = names.map((n) => n.trim()).filter(Boolean);
+    if (!name.trim()) return setError(t("new.needName"));
+    if (clean.length < 2) return setError(t("new.needPlayers"));
+
+    const players: Player[] = clean.map((n) => ({ id: genId(), name: n }));
+    const seasonId = genId();
+    const season: Season = {
+      id: seasonId,
+      name: name.trim(),
+      players,
+      events: buildSchedule(seasonId, players, startDate, interval),
+      revealAt: deadline ? new Date(`${deadline}T23:59:59`).getTime() : undefined,
+      createdAt: Date.now(),
+    };
+
+    store.createSeason(season);
+    navigate(`/season/${seasonId}`);
+  }
+
+  return (
+    <section className="section">
+      <div className="container narrow">
+        <h1 className="section-title">{t("new.title")}</h1>
+
+        <form className="form" onSubmit={submit}>
+          <label className="field">
+            <span>{t("new.seasonName")}</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("new.seasonNamePlaceholder")}
+            />
+          </label>
+
+          <fieldset className="field">
+            <legend>{t("new.players")}</legend>
+            <p className="muted small">{t("new.playersHelp")}</p>
+            {names.map((n, i) => (
+              <div key={i} className="player-row">
+                <input
+                  value={n}
+                  onChange={(e) => setNameAt(i, e.target.value)}
+                  placeholder={t("new.playerPlaceholder")}
+                />
+                {names.length > 2 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => removePlayer(i)}
+                  >
+                    {t("new.remove")}
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={addPlayer}>
+              + {t("new.addPlayer")}
+            </button>
+          </fieldset>
+
+          <div className="field-grid">
+            <label className="field">
+              <span>{t("new.startDate")}</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>{t("new.interval")}</span>
+              <input
+                type="number"
+                min={1}
+                value={interval}
+                onChange={(e) => setInterval(Math.max(1, Number(e.target.value)))}
+              />
+            </label>
+          </div>
+
+          <label className="field">
+            <span>{t("new.deadline")}</span>
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+            <span className="muted small">{t("new.deadlineHelp")}</span>
+          </label>
+
+          {error && <p className="form-error">{error}</p>}
+
+          <button type="submit" className="btn btn-primary">
+            {t("new.create")}
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
