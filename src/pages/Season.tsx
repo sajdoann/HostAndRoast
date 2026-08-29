@@ -1,16 +1,12 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
-import { useLoaded, useSeason, useSeasonRatings } from "../store/hooks";
+import { useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import { todayISO } from "../domain/schedule";
-import {
-  expectedRatings,
-  isEventComplete,
-  ratingsForEvent,
-  revealStatus,
-} from "../domain/reveal";
+import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
 import type { DinnerEvent, Season as SeasonModel } from "../domain/types";
 
 function statusKey(event: DinnerEvent, season: SeasonModel, ratingsIn: number): string {
@@ -21,21 +17,89 @@ function statusKey(event: DinnerEvent, season: SeasonModel, ratingsIn: number): 
   return "upcoming";
 }
 
+/** One dinner row: editable (owner or its cook) or read-only. */
+function DinnerRow({
+  season,
+  event,
+  ratingsCount,
+  canEdit,
+}: {
+  season: SeasonModel;
+  event: DinnerEvent;
+  ratingsCount: number;
+  canEdit: boolean;
+}) {
+  const { t } = useI18n();
+  const [meal, setMeal] = useState(event.mealDescription ?? "");
+  const hostName = season.players.find((p) => p.id === event.hostId)?.name ?? "—";
+  const key = statusKey(event, season, ratingsCount);
+
+  function saveMeal() {
+    if ((event.mealDescription ?? "") !== meal.trim()) {
+      store.updateEvent(season.id, { ...event, mealDescription: meal.trim() });
+    }
+  }
+
+  return (
+    <div className="schedule-row card">
+      <div className="schedule-host">
+        <strong>{hostName}</strong>
+        <span className={`pill pill-${key}`}>{t(`season.status.${key}`)}</span>
+      </div>
+
+      {canEdit ? (
+        <input
+          className="schedule-date"
+          type="date"
+          value={event.date}
+          onChange={(e) => store.updateEvent(season.id, { ...event, date: e.target.value })}
+        />
+      ) : (
+        <span className="schedule-date muted">{event.date}</span>
+      )}
+
+      {canEdit ? (
+        <input
+          className="meal-input"
+          value={meal}
+          placeholder={t("season.mealPlaceholder")}
+          onChange={(e) => setMeal(e.target.value)}
+          onBlur={saveMeal}
+        />
+      ) : (
+        <span className="meal-text muted">
+          {event.mealDescription || t("season.noMeal")}
+        </span>
+      )}
+
+      <div className="schedule-meta muted">
+        <code>{event.code}</code> ·{" "}
+        {t("season.rated", { done: ratingsCount, total: expectedRatings(season) })}
+      </div>
+
+      <div className="schedule-actions">
+        <Link to={`/event/${season.id}/${event.id}`} className="btn btn-ghost btn-sm">
+          {t("season.openHost")}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function Season() {
   const { t, lang } = useI18n();
-  const { user, required, loading: authLoading } = useAuth();
+  const { user, required } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
-  const season = useSeason(id);
-  const ratings = useSeasonRatings(season);
-  const loaded = useLoaded();
+  const { season, ratings, loaded } = useSeasonView(id);
+  const myClaim = useMyClaim(id);
 
-  if (!loaded || (required && authLoading)) return <Loading />;
+  if (!loaded) return <Loading />;
 
   if (!season) {
     return (
       <section className="section">
-        <div className="container">
+        <div className="container center-narrow">
           <p className="muted">{t("notFound.body")}</p>
           <Link to="/" className="btn btn-primary">
             {t("notFound.back")}
@@ -45,35 +109,9 @@ export default function Season() {
     );
   }
 
-  // The season dashboard (full schedule + all join codes) is organizer-only.
   const isOwner = !required || (!!user && season.ownerId === user.uid);
-  if (!isOwner) {
-    return (
-      <section className="section">
-        <div className="container center-narrow">
-          <div className="lock-badge">🔒</div>
-          <h1 className="section-title">{t("season.ownerOnlyTitle")}</h1>
-          <p className="muted">{t("season.ownerOnlyBody")}</p>
-          <Link to="/" className="btn btn-primary">
-            {t("notFound.back")}
-          </Link>
-        </div>
-      </section>
-    );
-  }
-
-  const reveal = revealStatus(season, ratings);
-  const hostName = (hostId: string) =>
-    season.players.find((p) => p.id === hostId)?.name ?? "—";
   const events = [...season.events].sort((a, b) => a.date.localeCompare(b.date));
-
-  function editDate(eventId: string, date: string) {
-    if (!season || !date) return;
-    store.updateSeason({
-      ...season,
-      events: season.events.map((e) => (e.id === eventId ? { ...e, date } : e)),
-    });
-  }
+  const myName = myClaim ? season.players.find((p) => p.id === myClaim)?.name : undefined;
 
   function remove() {
     if (season && confirm(t("season.deleteConfirm"))) {
@@ -87,16 +125,43 @@ export default function Season() {
       <div className="container">
         <h1 className="section-title">{season.name}</h1>
 
-        <div className={`reveal-banner ${reveal.revealed ? "is-open" : "is-locked"}`}>
+        {/* Identity: claim your nickname once (signed-in participants). */}
+        {required &&
+          (user ? (
+            myName ? (
+              <p className="muted small">{t("season.youAre", { name: myName })}</p>
+            ) : (
+              <div className="claim-box card">
+                <strong>{t("season.claimTitle")}</strong>
+                <p className="muted small">{t("season.claimHelp")}</p>
+                <div className="claim-names">
+                  {season.players.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="name-btn"
+                      onClick={() => store.claimPlayer(season.id, user.uid, p.id)}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : null)}
+
+        <div className={`reveal-banner ${revealStatus(season, ratings).revealed ? "is-open" : "is-locked"}`}>
           <strong>
-            {reveal.revealed ? t("season.reveal.unlocked") : t("season.reveal.locked")}
+            {revealStatus(season, ratings).revealed
+              ? t("season.reveal.unlocked")
+              : t("season.reveal.locked")}
           </strong>
           <span className="muted">
-            {reveal.revealed
+            {revealStatus(season, ratings).revealed
               ? t("season.reveal.unlockedBody")
               : t("season.reveal.lockedBody")}
           </span>
-          {reveal.revealed && (
+          {revealStatus(season, ratings).revealed && (
             <Link to={`/season/${season.id}/results`} className="btn btn-primary btn-sm">
               {t("season.results")}
             </Link>
@@ -109,34 +174,15 @@ export default function Season() {
         <div className="schedule">
           {events.map((event) => {
             const count = ratingsForEvent(event, ratings).length;
-            const expected = expectedRatings(season);
-            const key = statusKey(event, season, count);
-            const complete = isEventComplete(event, season, ratings);
+            const canEdit = isOwner || (!!myClaim && myClaim === event.hostId);
             return (
-              <div key={event.id} className="schedule-row card">
-                <div className="schedule-host">
-                  <strong>{hostName(event.hostId)}</strong>
-                  <span className={`pill pill-${key}`}>{t(`season.status.${key}`)}</span>
-                </div>
-                <input
-                  className="schedule-date"
-                  type="date"
-                  value={event.date}
-                  onChange={(e) => editDate(event.id, e.target.value)}
-                />
-                <div className="schedule-meta muted">
-                  <code>{event.code}</code> · {t("season.rated", { done: count, total: expected })}
-                </div>
-                <div className="schedule-actions">
-                  <Link
-                    to={`/event/${event.id}`}
-                    className="btn btn-ghost btn-sm"
-                    aria-disabled={complete}
-                  >
-                    {t("season.openHost")}
-                  </Link>
-                </div>
-              </div>
+              <DinnerRow
+                key={event.id}
+                season={season}
+                event={event}
+                ratingsCount={count}
+                canEdit={canEdit}
+              />
             );
           })}
         </div>
@@ -144,17 +190,17 @@ export default function Season() {
         {season.revealAt && (
           <p className="muted small">
             {t("season.deadline")}:{" "}
-            {new Date(season.revealAt).toLocaleDateString(
-              lang === "cs" ? "cs-CZ" : "en-GB"
-            )}
+            {new Date(season.revealAt).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-GB")}
           </p>
         )}
 
-        <div className="season-footer">
-          <button className="btn btn-ghost btn-sm danger" onClick={remove}>
-            {t("season.delete")}
-          </button>
-        </div>
+        {isOwner && (
+          <div className="season-footer">
+            <button className="btn btn-ghost btn-sm danger" onClick={remove}>
+              {t("season.delete")}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

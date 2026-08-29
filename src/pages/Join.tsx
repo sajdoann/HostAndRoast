@@ -1,8 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
+import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
-import { useDB, useLoaded } from "../store/hooks";
+import { useDB, useJoinTarget, useMyClaim } from "../store/hooks";
 import Loading from "../components/Loading";
 import ScoreSlider from "../components/ScoreSlider";
 import { CATEGORIES } from "../domain/categories";
@@ -20,12 +21,13 @@ function centre(children: ReactNode) {
 
 export default function Join() {
   const { t } = useI18n();
+  const { user } = useAuth();
   const { code } = useParams();
-  const { seasons, ratings } = useDB();
-  const loaded = useLoaded();
+  const { target, codeState } = useJoinTarget(code);
+  const myClaim = useMyClaim(target?.season.id);
+  const { ratings: allRatings } = useDB();
 
-  const target = useMemo(() => store.findByCode(code ?? ""), [code, seasons]);
-  const [raterId, setRaterId] = useState<string | null>(null);
+  const [manualRaterId, setManualRaterId] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<CategoryId, number>>({
     food: 5,
     atmosphere: 5,
@@ -34,7 +36,7 @@ export default function Join() {
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  if (!loaded) return <Loading />;
+  if (codeState === "loading") return <Loading />;
 
   if (!target) {
     return centre(
@@ -60,7 +62,9 @@ export default function Join() {
     );
   }
 
-  if (isEventComplete(event, season, ratings)) {
+  const liveRatings = ratingsForEvent(event, allRatings);
+
+  if (isEventComplete(event, season, liveRatings)) {
     return centre(
       <>
         <h1 className="section-title">{t("join.closedTitle")}</h1>
@@ -78,9 +82,20 @@ export default function Join() {
     );
   }
 
-  const ratedIds = new Set(ratingsForEvent(event, ratings).map((r) => r.raterId));
+  // If you're the host tonight, you don't rate your own dinner.
+  if (myClaim && myClaim === event.hostId) {
+    return centre(
+      <>
+        <h1 className="section-title">{t("event.hostedBy", { host: host?.name ?? "—" })}</h1>
+        <p className="muted">{t("join.youAreHost")}</p>
+      </>
+    );
+  }
 
-  // Name picker
+  const ratedIds = new Set(liveRatings.map((r) => r.raterId));
+  // Auto-identity from a claimed nickname, else whatever the guest picks.
+  const raterId = manualRaterId ?? (myClaim && myClaim !== event.hostId ? myClaim : null);
+
   if (!raterId) {
     return centre(
       <>
@@ -99,7 +114,11 @@ export default function Join() {
                   type="button"
                   className="name-btn"
                   disabled={already}
-                  onClick={() => setRaterId(p.id)}
+                  onClick={() => {
+                    setManualRaterId(p.id);
+                    // Signed in? Remember this identity for the whole season.
+                    if (user && !myClaim) store.claimPlayer(season.id, user.uid, p.id);
+                  }}
                 >
                   {p.name}
                   {already && <span className="muted small"> · {t("join.alreadyVotedName")}</span>}
@@ -125,9 +144,12 @@ export default function Join() {
     setSubmitted(true);
   }
 
+  const raterName = season.players.find((p) => p.id === raterId)?.name;
+
   return centre(
     <>
       <h1 className="section-title">{t("join.rateTitle", { host: host?.name ?? "—" })}</h1>
+      {raterName && <p className="muted small">{t("join.ratingAs", { name: raterName })}</p>}
       <p className="muted small">{t("join.scoreHelp")}</p>
 
       <div className="rate-form">

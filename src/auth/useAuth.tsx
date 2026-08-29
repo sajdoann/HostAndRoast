@@ -16,6 +16,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { store } from "../store";
 
 /**
  * Auth for organizers (Google sign-in). Guests never need this — they rate
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      store.setViewer(u?.uid ?? null); // drives the owner's season list
     });
   }, []);
 

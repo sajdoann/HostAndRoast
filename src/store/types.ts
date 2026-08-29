@@ -1,47 +1,53 @@
-import type { JoinTarget, Rating, Season } from "../domain/types";
+import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
 import type { HostResult } from "../domain/scoring";
 
 export interface DB {
   seasons: Season[];
   ratings: Rating[];
+  /** The current viewer's claimed identity per season: seasonId → playerId. */
+  myClaims: Record<string, string>;
 }
+
+/** Whether a join code has been resolved yet. */
+export type CodeState = "loading" | "missing" | "ready";
 
 /**
  * The single seam between the app and its persistence.
- * The bundled implementation is localStorage-backed (see localStore.ts);
- * swapping in Firestore means writing another Store and pointing index.ts at it.
  *
- * NOTE: ratings are intentionally NOT exposed as a public list. Callers get
- * only the aggregates the reveal logic allows — mirroring the security model
- * where raw scores are never client-readable.
+ * The Firestore implementation loads data on demand rather than downloading
+ * everything: the owner sees their own seasons (setViewer), and any season is
+ * loaded by its link (ensureSeason) or by a join code (resolveCode). This keeps
+ * the schedule "anyone with the link" without exposing every season publicly.
  */
 export interface Store {
-  /** Reactive snapshot. Reference is stable until a mutation occurs. */
+  /** Reactive snapshot (owner's seasons + any loaded on demand). */
   getState(): DB;
   subscribe(listener: () => void): () => void;
 
-  /**
-   * Whether the initial data has arrived. localStorage is instant (always
-   * true); Firestore flips this true after the first seasons snapshot, so
-   * pages can show a loading state instead of a premature "not found".
-   */
+  /** True once the viewer's own season list has loaded (for the home page). */
   isLoaded(): boolean;
+  /** True once a specific season (doc + events) has loaded. */
+  isSeasonLoaded(seasonId: string): boolean;
+  /** Resolution state of a join code. */
+  getCodeState(code: string): CodeState;
 
-  createSeason(season: Season): void;
-  updateSeason(season: Season): void;
-  deleteSeason(seasonId: string): void;
+  /** Set the signed-in viewer (drives the owner's season list + claim writes). */
+  setViewer(uid: string | null): void;
 
-  /** Resolve a public join code to its event + season. */
+  /** Begin loading a season by id (idempotent). */
+  ensureSeason(seasonId: string): void;
+  /** Look up a join code and load its season. */
+  resolveCode(code: string): void;
+  /** Read a resolved code from current state. */
   findByCode(code: string): JoinTarget | undefined;
 
-  /** Record a guest's rating. Ignores duplicates (one per event+rater). */
-  addRating(rating: Rating): void;
+  createSeason(season: Season): void;
+  /** Edit one dinner (date / meal). Owner or the cook who claimed that player. */
+  updateEvent(seasonId: string, event: DinnerEvent): void;
+  /** A signed-in participant claims which player (nickname) they are. */
+  claimPlayer(seasonId: string, uid: string, playerId: string): void;
+  deleteSeason(seasonId: string): void;
 
-  /**
-   * The leaderboard for a season, or null if it isn't available yet.
-   * Local mode computes it from the ratings it holds; Firestore mode returns
-   * the results a Cloud Function publishes once the reveal condition is met
-   * (clients can't read raw scores, so they can't compute it themselves).
-   */
+  addRating(rating: Rating): void;
   getResults(seasonId: string): HostResult[] | null;
 }

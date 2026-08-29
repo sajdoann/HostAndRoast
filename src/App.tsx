@@ -17,7 +17,7 @@ export default function App() {
         <Route path="new" element={<NewSeason />} />
         <Route path="season/:id" element={<Season />} />
         <Route path="season/:id/results" element={<Results />} />
-        <Route path="event/:id" element={<EventDay />} />
+        <Route path="event/:seasonId/:eventId" element={<EventDay />} />
         <Route path="join/:code" element={<Join />} />
         <Route path="*" element={<NotFound />} />
       </Route>

@@ -17,11 +17,26 @@ export interface Player {
 export interface DinnerEvent {
   id: string;
   seasonId: string;
+  /** Player id of the cook hosting this dinner. */
   hostId: string;
   /** Host date, ISO `YYYY-MM-DD`. */
   date: string;
   /** Short public join code, encoded into the QR shown on the day. */
   code: string;
+  /** The cook's menu for the night (set by the cook or organizer). */
+  mealDescription?: string;
+}
+
+/**
+ * A signed-in participant's identity within a season: which player (nickname)
+ * they are. Set once; then rating auto-knows them and, if they host a dinner,
+ * they may edit it. Kept separate from dinners so it isn't tied to hosting.
+ */
+export interface Claim {
+  /** Firebase uid of the participant. */
+  uid: string;
+  /** The player id they identify as. */
+  playerId: string;
 }
 
 export interface Rating {

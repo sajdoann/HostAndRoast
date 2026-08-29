@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
-import { useDB, useLoaded } from "../store/hooks";
+import { useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
@@ -8,14 +8,12 @@ import { expectedRatings, isEventComplete, ratingsForEvent } from "../domain/rev
 
 export default function EventDay() {
   const { t } = useI18n();
-  const { id } = useParams();
-  const { seasons, ratings } = useDB();
-  const loaded = useLoaded();
-
-  const season = seasons.find((s) => s.events.some((e) => e.id === id));
-  const event = season?.events.find((e) => e.id === id);
+  const { seasonId, eventId } = useParams();
+  const { season, ratings, loaded } = useSeasonView(seasonId);
 
   if (!loaded) return <Loading />;
+
+  const event = season?.events.find((e) => e.id === eventId);
 
   if (!season || !event) {
     return (
@@ -41,6 +39,7 @@ export default function EventDay() {
       <div className="container center-narrow event-day">
         <p className="eyebrow">{t("event.title")}</p>
         <h1 className="section-title">{t("event.hostedBy", { host: host?.name ?? "—" })}</h1>
+        {event.mealDescription && <p className="event-meal">“{event.mealDescription}”</p>}
 
         {closed ? (
           <p className="event-closed">{t("event.closed")}</p>
@@ -59,9 +58,7 @@ export default function EventDay() {
           </>
         )}
 
-        <p className="muted progress">
-          {t("event.rated", { done, total: expected })}
-        </p>
+        <p className="muted progress">{t("event.rated", { done, total: expected })}</p>
 
         <Link to={`/season/${season.id}`} className="btn btn-ghost btn-sm">
           {t("event.backToSeason")}

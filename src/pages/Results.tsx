@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { store } from "../store";
-import { useLoaded, useSeason, useSeasonRatings } from "../store/hooks";
+import { useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import { revealStatus } from "../domain/reveal";
 import { MAX_TOTAL } from "../domain/scoring";
@@ -10,9 +10,7 @@ import { CATEGORIES } from "../domain/categories";
 export default function Results() {
   const { t, lang } = useI18n();
   const { id } = useParams();
-  const season = useSeason(id);
-  const ratings = useSeasonRatings(season);
-  const loaded = useLoaded();
+  const { season, ratings, loaded } = useSeasonView(id);
 
   if (!loaded) return <Loading />;
 

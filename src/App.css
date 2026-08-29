@@ -290,6 +290,34 @@ fieldset.field {
 .schedule-date {
   max-width: 160px;
 }
+.meal-input,
+.meal-text {
+  min-width: 0;
+}
+.meal-text {
+  font-style: italic;
+}
+
+/* Claim identity */
+.claim-box {
+  padding: 16px 18px;
+  margin: 6px 0 18px;
+}
+.claim-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.claim-names .name-btn {
+  width: auto;
+  padding: 8px 14px;
+}
+.event-meal {
+  font-style: italic;
+  font-size: 1.1rem;
+  margin: 4px 0 12px;
+}
 .schedule-meta code {
   background: var(--cream);
   padding: 2px 6px;

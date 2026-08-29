@@ -1,149 +1,319 @@
 import {
   collection,
-  collectionGroup,
-  deleteDoc,
   doc,
+  getDoc,
+  getDocs,
   onSnapshot,
+  query,
   setDoc,
+  updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import type { JoinTarget, Rating, Season } from "../domain/types";
+import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
 import type { HostResult } from "../domain/scoring";
-import type { DB, Store } from "./types";
+import type { CodeState, DB, Store } from "./types";
 
 /**
- * Firestore-backed Store. Mirrors the localStore surface (a stable snapshot +
- * pub/sub) but the snapshot is fed by real-time onSnapshot listeners.
+ * Firestore-backed Store that loads on demand:
+ *   - the viewer's own seasons (setViewer → query on ownerId),
+ *   - any season opened by its link (ensureSeason) or join code (resolveCode).
  *
- * Score-hiding is preserved by the data layout:
- *   seasons/{id}                      — public (schedule, players, join codes)
- *   seasons/{id}/ratings/{eId_rId}    — scores, READ-NEVER for clients
- *   seasons/{id}/receipts/{eId_rId}   — no scores, public; drives progress/reveal
- *   results/{seasonId}                — leaderboard, written by a Function on reveal
- *
- * So the client can count who has rated (receipts) and show the final board
- * (results) without ever reading a raw score.
+ * Layout (see firestore.rules):
+ *   seasons/{sid}                     season doc (owner-writable; get is public)
+ *   seasons/{sid}/events/{eid}        one dinner (owner or claimed cook edits)
+ *   codes/{CODE}                      { seasonId, eventId } join lookup
+ *   seasons/{sid}/ratings/{eid_rid}   scores (read-never)
+ *   seasons/{sid}/receipts/{eid_rid}  who rated (public, no scores)
+ *   results/{sid}                     leaderboard (Function-published)
  */
 export function createFirestoreStore(): Store {
   if (!db) throw new Error("Firestore is not configured");
   const fdb = db;
 
-  // Receipts are surfaced as Rating objects with zeroed scores — only their
-  // (eventId, raterId) matter for counting; the real scores stay server-side.
-  let state: DB = { seasons: [], ratings: [] };
-  let results: Record<string, HostResult[]> = {};
-  let loaded = false; // true once the first seasons snapshot arrives
+  type SeasonDoc = Omit<Season, "id" | "events">;
+  const seasonDocs = new Map<string, SeasonDoc>();
+  const eventsBySeason = new Map<string, DinnerEvent[]>();
+  const receiptsBySeason = new Map<string, Rating[]>();
+  const resultsById = new Map<string, HostResult[]>();
+
+  const seasonDocLoaded = new Set<string>();
+  const eventsLoaded = new Set<string>();
+  const subs = new Map<string, Array<() => void>>();
+  const claimSubs = new Map<string, () => void>(); // viewer's claim doc, per season
+  const myClaims: Record<string, string> = {}; // seasonId → playerId (current viewer)
+  const codeToSeason = new Map<string, string | null>(); // null = not found
+  let ownerUnsub: (() => void) | null = null;
+  let ownerLoaded = false;
+  let viewerUid: string | null = null;
+
+  let state: DB = { seasons: [], ratings: [], myClaims: {} };
   const listeners = new Set<() => void>();
 
-  function notify() {
-    listeners.forEach((l) => l());
-  }
-
-  // If a listener errors (e.g. Firestore not enabled yet, or rules not
-  // deployed), surface it — otherwise the app just shows empty data silently.
   const onError = (where: string) => (err: unknown) =>
     console.error(`[firestore] ${where} listener failed:`, err);
 
-  onSnapshot(
-    collection(fdb, "seasons"),
-    (snap) => {
-      state = {
-        ...state,
-        seasons: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Season, "id">) })),
-      };
-      loaded = true;
-      notify();
-    },
-    onError("seasons")
-  );
+  function rebuild() {
+    const seasons: Season[] = [];
+    for (const [id, docData] of seasonDocs) {
+      const events = [...(eventsBySeason.get(id) ?? [])].sort((a, b) =>
+        a.date.localeCompare(b.date)
+      );
+      seasons.push({ ...docData, id, events });
+    }
+    const ratings: Rating[] = [];
+    for (const list of receiptsBySeason.values()) ratings.push(...list);
+    state = { seasons, ratings, myClaims: { ...myClaims } };
+    listeners.forEach((l) => l());
+  }
 
-  onSnapshot(
-    collectionGroup(fdb, "receipts"),
-    (snap) => {
-      state = {
-        ...state,
-        ratings: snap.docs.map((d) => {
-          const data = d.data() as { eventId: string; raterId: string; createdAt: number };
-          return {
-            id: d.id,
-            eventId: data.eventId,
-            raterId: data.raterId,
-            scores: { food: 0, atmosphere: 0, entertainment: 0 },
-            createdAt: data.createdAt,
-          } satisfies Rating;
-        }),
-      };
-      notify();
-    },
-    onError("receipts")
-  );
+  // Subscribe to the current viewer's claim doc for a season (who they are).
+  function subscribeClaim(seasonId: string) {
+    claimSubs.get(seasonId)?.();
+    claimSubs.delete(seasonId);
+    delete myClaims[seasonId];
+    if (!viewerUid) return;
+    const unsub = onSnapshot(
+      doc(fdb, "seasons", seasonId, "claims", viewerUid),
+      (d) => {
+        if (d.exists()) myClaims[seasonId] = (d.data() as { playerId: string }).playerId;
+        else delete myClaims[seasonId];
+        rebuild();
+      },
+      onError("claim")
+    );
+    claimSubs.set(seasonId, unsub);
+  }
 
-  onSnapshot(
-    collection(fdb, "results"),
-    (snap) => {
-      const next: Record<string, HostResult[]> = {};
-      snap.docs.forEach((d) => {
-        next[d.id] = (d.data() as { board: HostResult[] }).board ?? [];
-      });
-      results = next;
-      notify();
-    },
-    onError("results")
-  );
+  function mapEvents(seasonId: string, snap: import("firebase/firestore").QuerySnapshot) {
+    return snap.docs.map((d) => {
+      const data = d.data() as Omit<DinnerEvent, "id" | "seasonId">;
+      return { id: d.id, seasonId, ...data } satisfies DinnerEvent;
+    });
+  }
 
-  function seasonDoc(season: Season) {
+  function ensureSeason(seasonId: string) {
+    if (subs.has(seasonId)) return;
+    const unsubs: Array<() => void> = [];
+
+    unsubs.push(
+      onSnapshot(
+        doc(fdb, "seasons", seasonId),
+        (d) => {
+          if (d.exists()) seasonDocs.set(seasonId, d.data() as SeasonDoc);
+          else seasonDocs.delete(seasonId);
+          seasonDocLoaded.add(seasonId);
+          rebuild();
+        },
+        onError("season")
+      )
+    );
+    unsubs.push(
+      onSnapshot(
+        collection(fdb, "seasons", seasonId, "events"),
+        (snap) => {
+          eventsBySeason.set(seasonId, mapEvents(seasonId, snap));
+          eventsLoaded.add(seasonId);
+          rebuild();
+        },
+        onError("events")
+      )
+    );
+    unsubs.push(
+      onSnapshot(
+        collection(fdb, "seasons", seasonId, "receipts"),
+        (snap) => {
+          receiptsBySeason.set(
+            seasonId,
+            snap.docs.map((d) => {
+              const data = d.data() as { eventId: string; raterId: string; createdAt: number };
+              return {
+                id: d.id,
+                eventId: data.eventId,
+                raterId: data.raterId,
+                scores: { food: 0, atmosphere: 0, entertainment: 0 },
+                createdAt: data.createdAt,
+              } satisfies Rating;
+            })
+          );
+          rebuild();
+        },
+        onError("receipts")
+      )
+    );
+    unsubs.push(
+      onSnapshot(
+        doc(fdb, "results", seasonId),
+        (d) => {
+          if (d.exists()) resultsById.set(seasonId, (d.data() as { board: HostResult[] }).board ?? []);
+          else resultsById.delete(seasonId);
+          rebuild();
+        },
+        onError("results")
+      )
+    );
+
+    subs.set(seasonId, unsubs);
+    subscribeClaim(seasonId);
+  }
+
+  function eventDoc(event: DinnerEvent) {
     const data: Record<string, unknown> = {
-      name: season.name,
-      ownerId: season.ownerId,
-      players: season.players,
-      events: season.events,
-      createdAt: season.createdAt,
+      hostId: event.hostId,
+      date: event.date,
+      code: event.code,
     };
-    if (season.revealAt != null) data.revealAt = season.revealAt;
+    if (event.mealDescription != null) data.mealDescription = event.mealDescription;
     return data;
   }
 
   return {
     getState: () => state,
+    isLoaded: () => ownerLoaded,
+    isSeasonLoaded: (seasonId: string) =>
+      seasonDocLoaded.has(seasonId) && eventsLoaded.has(seasonId),
 
-    isLoaded: () => loaded,
+    getCodeState(code: string): CodeState {
+      const key = code.trim().toUpperCase();
+      if (!codeToSeason.has(key)) return "loading";
+      const sid = codeToSeason.get(key);
+      if (sid == null) return "missing";
+      return this.isSeasonLoaded(sid) ? "ready" : "loading";
+    },
 
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
 
-    createSeason(season) {
-      void setDoc(doc(fdb, "seasons", season.id), seasonDoc(season));
+    setViewer(uid: string | null) {
+      if (uid === viewerUid) return;
+      viewerUid = uid;
+      // Re-point every loaded season's claim subscription at the new viewer.
+      for (const seasonId of subs.keys()) subscribeClaim(seasonId);
+      ownerUnsub?.();
+      ownerUnsub = null;
+      ownerLoaded = false;
+      if (!uid) {
+        ownerLoaded = true;
+        rebuild();
+        return;
+      }
+      ownerUnsub = onSnapshot(
+        query(collection(fdb, "seasons"), where("ownerId", "==", uid)),
+        (snap) => {
+          snap.docs.forEach((d) => {
+            seasonDocs.set(d.id, d.data() as SeasonDoc);
+            seasonDocLoaded.add(d.id);
+            ensureSeason(d.id); // load events so the owner's dashboard is ready
+          });
+          ownerLoaded = true;
+          rebuild();
+        },
+        onError("my-seasons")
+      );
     },
 
-    updateSeason(season) {
-      void setDoc(doc(fdb, "seasons", season.id), seasonDoc(season));
+    ensureSeason,
+
+    resolveCode(code: string) {
+      const key = code.trim().toUpperCase();
+      if (codeToSeason.has(key)) return; // already resolving/resolved
+      getDoc(doc(fdb, "codes", key))
+        .then((d) => {
+          if (!d.exists()) {
+            codeToSeason.set(key, null);
+          } else {
+            const sid = (d.data() as { seasonId: string }).seasonId;
+            codeToSeason.set(key, sid);
+            ensureSeason(sid);
+          }
+          rebuild();
+        })
+        .catch((e) => {
+          console.error("[firestore] resolveCode failed:", e);
+          codeToSeason.set(key, null);
+          rebuild();
+        });
     },
 
-    deleteSeason(seasonId) {
-      // Note: subcollections must be cleaned up server-side (a Function or the
-      // Firebase CLI); deleting the parent doc alone leaves them orphaned.
-      void deleteDoc(doc(fdb, "seasons", seasonId));
-    },
-
-    findByCode(code) {
+    findByCode(code: string): JoinTarget | undefined {
       const wanted = code.trim().toUpperCase();
       for (const season of state.seasons) {
         const event = season.events.find((e) => e.code === wanted);
-        if (event) return { season, event } satisfies JoinTarget;
+        if (event) return { season, event };
       }
       return undefined;
     },
 
-    addRating(rating) {
+    createSeason(season: Season) {
+      const batch = writeBatch(fdb);
+      const { events, ...meta } = season;
+      const seasonData: Record<string, unknown> = {
+        name: meta.name,
+        ownerId: meta.ownerId,
+        players: meta.players,
+        createdAt: meta.createdAt,
+      };
+      if (meta.revealAt != null) seasonData.revealAt = meta.revealAt;
+      batch.set(doc(fdb, "seasons", season.id), seasonData);
+      for (const event of events) {
+        // ownerId is denormalized onto the event so the create rule needs no
+        // cross-doc read (the season isn't committed yet within this batch).
+        batch.set(doc(fdb, "seasons", season.id, "events", event.id), {
+          ...eventDoc(event),
+          ownerId: meta.ownerId,
+        });
+        batch.set(doc(fdb, "codes", event.code), { seasonId: season.id, eventId: event.id });
+      }
+      batch.commit().catch(onError("createSeason"));
+      ensureSeason(season.id);
+    },
+
+    updateEvent(seasonId: string, event: DinnerEvent) {
+      void updateDoc(doc(fdb, "seasons", seasonId, "events", event.id), {
+        date: event.date,
+        mealDescription: event.mealDescription ?? null,
+      }).catch(onError("updateEvent"));
+    },
+
+    claimPlayer(seasonId: string, uid: string, playerId: string) {
+      void setDoc(doc(fdb, "seasons", seasonId, "claims", uid), { playerId }).catch(
+        onError("claimPlayer")
+      );
+    },
+
+    deleteSeason(seasonId: string) {
+      // Delete the season doc + its dinners. Code docs are left as harmless
+      // orphans (a stale code just resolves to a missing season); the rules
+      // keep codes immutable, so we don't touch them here.
+      getDocs(collection(fdb, "seasons", seasonId, "events"))
+        .then((snap) => {
+          const batch = writeBatch(fdb);
+          snap.docs.forEach((d) => batch.delete(d.ref));
+          batch.delete(doc(fdb, "seasons", seasonId));
+          return batch.commit();
+        })
+        .catch(onError("deleteSeason"));
+      subs.get(seasonId)?.forEach((u) => u());
+      subs.delete(seasonId);
+      claimSubs.get(seasonId)?.();
+      claimSubs.delete(seasonId);
+      delete myClaims[seasonId];
+      seasonDocs.delete(seasonId);
+      eventsBySeason.delete(seasonId);
+      seasonDocLoaded.delete(seasonId);
+      eventsLoaded.delete(seasonId);
+      rebuild();
+    },
+
+    addRating(rating: Rating) {
       const season = state.seasons.find((s) =>
         s.events.some((e) => e.id === rating.eventId)
       );
       if (!season) return;
       const batch = writeBatch(fdb);
-      // Scores — read-never.
       batch.set(doc(fdb, "seasons", season.id, "ratings", rating.id), {
         eventId: rating.eventId,
         raterId: rating.raterId,
@@ -151,17 +321,16 @@ export function createFirestoreStore(): Store {
         comment: rating.comment ?? null,
         createdAt: rating.createdAt,
       });
-      // Receipt — public, no scores.
       batch.set(doc(fdb, "seasons", season.id, "receipts", rating.id), {
         eventId: rating.eventId,
         raterId: rating.raterId,
         createdAt: rating.createdAt,
       });
-      void batch.commit();
+      batch.commit().catch(onError("addRating"));
     },
 
-    getResults(seasonId) {
-      return results[seasonId] ?? null;
+    getResults(seasonId: string) {
+      return resultsById.get(seasonId) ?? null;
     },
   };
 }

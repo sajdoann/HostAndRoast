@@ -1,35 +1,61 @@
 rules_version = '2';
 
-// Host & Roast — starter security rules for the rating game.
+// Host & Roast — security rules.
 //
-// The core rule: raw ratings are NEVER readable by clients — not even the
-// organizer — so scores stay sealed. A Cloud Function computes the leaderboard
-// and writes it to /results/{seasonId} only once the reveal condition is met.
-// TODO(rules): tighten season writes once organizer auth exists (see ROADMAP).
+// Access model:
+//   - Schedule + dinners: readable by anyone with the season's link (get), but
+//     not listable publicly (list is owner-only) — "anyone with the link".
+//   - Organizer (owner): full control of their season and dinners.
+//   - Cook: signs in, claims which player they are, then edits only their own
+//     dinner's date/menu.
+//   - Guests: rate with no login. Raw scores are never client-readable.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function scores() {
-      return request.resource.data.scores;
-    }
-    function validScore(v) {
-      return v is int && v >= 1 && v <= 10;
+    function scores() { return request.resource.data.scores; }
+    function validScore(v) { return v is int && v >= 1 && v <= 10; }
+
+    // The player id the signed-in user claimed in this season (or null).
+    function claimedPlayer(sid) {
+      return exists(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid)).data.playerId
+        : null;
     }
 
-    // Season doc: schedule, players and public join codes.
-    // Publicly readable so guests can join by code without an account.
-    // Only the signed-in organizer who created it may change or delete it —
-    // participants can't touch anyone's season.
-    match /seasons/{seasonId} {
-      allow read: if true;
+    match /seasons/{sid} {
+      allow get: if true;                                     // anyone with the link
+      allow list: if request.auth != null
+                  && resource.data.ownerId == request.auth.uid;   // only your own
       allow create: if request.auth != null
                     && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if request.auth != null
                     && resource.data.ownerId == request.auth.uid;
 
-      // Ratings live in a subcollection and are write-once, read-never.
-      // Deterministic id "<eventId>_<raterId>" makes a second submission an
-      // update, which is denied → one rating per guest per dinner.
+      // Dinners. ownerId is denormalized so create needs no cross-doc read.
+      match /events/{eid} {
+        allow read: if true;
+        allow create: if request.auth != null
+                      && request.resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null
+                      && resource.data.ownerId == request.auth.uid;
+        // Owner edits anything; the claimed cook edits only date/menu of their
+        // own dinner (hostId, code and ownerId must stay unchanged).
+        allow update: if request.auth != null && (
+          resource.data.ownerId == request.auth.uid
+          || ( claimedPlayer(sid) == resource.data.hostId
+               && request.resource.data.hostId == resource.data.hostId
+               && request.resource.data.code == resource.data.code
+               && request.resource.data.ownerId == resource.data.ownerId )
+        );
+      }
+
+      // Identity: a signed-in participant claims which player they are.
+      match /claims/{uid} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      // Scores — write-once, read-never.
       match /ratings/{ratingId} {
         allow read: if false;
         allow create: if validScore(scores().food)
@@ -39,18 +65,22 @@ service cloud.firestore {
       }
     }
 
-    // Receipts carry NO scores — just who rated — so the client can show
-    // "3 of 5 rated" and evaluate the reveal condition without leaking scores.
-    // Written together with the rating (same deterministic id), write-once.
-    // A recursive match is required so the client's collectionGroup("receipts")
-    // listener is authorized (a nested-only rule would be denied).
+    // Receipts: who rated, no scores. Public so progress + reveal can be shown.
     match /{path=**}/receipts/{receiptId} {
       allow read: if true;
       allow create: if true;
       allow update, delete: if false;
     }
 
-    // Published leaderboard — exists only after reveal, written by a Function.
+    // Join-code lookup: read one by code; not listable.
+    match /codes/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // Published leaderboard — written by a Cloud Function on reveal.
     match /results/{seasonId} {
       allow read: if true;
       allow write: if false;
