@@ -39,10 +39,19 @@ function detectInitial(): Lang {
   return LANGUAGES.includes(browser) ? browser : DEFAULT_LANG;
 }
 
+type TParams = Record<string, string | number>;
+
+function interpolate(template: string, params?: TParams): string {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    key in params ? String(params[key]) : `{${key}}`
+  );
+}
+
 type I18nValue = {
   lang: Lang;
   setLang: (lang: Lang) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: TParams) => string;
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -61,7 +70,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string) => resolve(DICTIONARIES[lang], key) ?? key,
+    (key: string, params?: TParams) =>
+      interpolate(resolve(DICTIONARIES[lang], key) ?? key, params),
     [lang]
   );
 

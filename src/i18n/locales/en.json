@@ -5,49 +5,123 @@
   },
   "nav": {
     "home": "Home",
-    "dinners": "Dinners",
-    "host": "Become a host",
-    "signIn": "Sign in"
+    "new": "New season"
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "host": "Host",
+    "date": "Date",
+    "code": "Code",
+    "status": "Status",
+    "copy": "Copy link",
+    "copied": "Copied!",
+    "open": "Open"
+  },
+  "categories": {
+    "food": "Food",
+    "atmosphere": "Hospitality & atmosphere",
+    "entertainment": "Entertainment"
   },
   "home": {
-    "eyebrow": "Home-cooked, hosted with heart",
-    "title": "Book a seat at a real roast dinner.",
-    "subtitle": "Local hosts open their tables. You bring your appetite. Warm food, good company, no restaurant in sight.",
-    "ctaPrimary": "Find a dinner",
-    "ctaSecondary": "Host a dinner",
+    "eyebrow": "A dinner game for friends",
+    "title": "Take turns hosting. Rate every dinner. Reveal the winner.",
+    "subtitle": "A Prostřeno-style season: each friend hosts one dinner, guests score food, atmosphere and entertainment — and the scores stay sealed until the very end.",
+    "ctaPrimary": "Create a season",
+    "ctaJoin": "Join a dinner",
+    "codePlaceholder": "Enter code",
+    "codeGo": "Go",
     "stepsTitle": "How it works",
     "steps": {
-      "browseTitle": "Browse",
-      "browseBody": "Discover roast dinners hosted near you, each with a menu and a story.",
-      "bookTitle": "Book",
-      "bookBody": "Reserve your seat and pay securely. Your host gets notified right away.",
-      "feastTitle": "Feast",
-      "feastBody": "Show up hungry. Share a table, a roast, and an evening worth remembering."
-    },
-    "featuredTitle": "This week's tables"
-  },
-  "dinners": {
-    "title": "Upcoming dinners",
-    "subtitle": "Pick a table. Seats are limited.",
-    "seatsLeft": "{count} seats left",
-    "perSeat": "per seat",
-    "book": "Book a seat",
-    "empty": "No dinners listed yet — check back soon."
-  },
-  "host": {
-    "eyebrow": "For hosts",
-    "title": "Turn your kitchen into a table worth booking.",
-    "subtitle": "Set your menu, pick a date, and welcome guests. We handle bookings and payments.",
-    "cta": "Start hosting",
-    "benefitsTitle": "Why host with us",
-    "benefits": {
-      "earnTitle": "Earn from what you love",
-      "earnBody": "Set your own price per seat and keep the majority.",
-      "toolsTitle": "Simple tools",
-      "toolsBody": "Manage your menu, dates, and guest list in one place.",
-      "communityTitle": "Meet your neighbours",
-      "communityBody": "Fill your table with people who love good food."
+      "createTitle": "1 · Create",
+      "createBody": "Add your friends and pick who hosts when. Everyone gets a date.",
+      "hostTitle": "2 · Host & rate",
+      "hostBody": "On the day, the host shows a QR code. Guests scan, pick their name, and score the evening.",
+      "revealTitle": "3 · Reveal",
+      "revealBody": "Scores stay hidden — even from the organizer — until every dinner is done. Then the leaderboard drops."
     }
+  },
+  "new": {
+    "title": "New season",
+    "seasonName": "Season name",
+    "seasonNamePlaceholder": "e.g. Autumn Roast 2026",
+    "players": "Players",
+    "playersHelp": "Add everyone who will host and rate. At least two.",
+    "playerPlaceholder": "Player name",
+    "addPlayer": "Add player",
+    "remove": "Remove",
+    "startDate": "First dinner date",
+    "interval": "Days between dinners",
+    "deadline": "Reveal deadline (optional)",
+    "deadlineHelp": "Results reveal automatically after this date even if some ratings are missing.",
+    "create": "Create season",
+    "needPlayers": "Add at least two players.",
+    "needName": "Give the season a name."
+  },
+  "season": {
+    "schedule": "Schedule",
+    "players": "Players",
+    "shareHint": "Open a dinner on its day to show the QR code.",
+    "results": "View results",
+    "openHost": "Open host view",
+    "deadline": "Reveal deadline",
+    "rated": "{done}/{total} rated",
+    "status": {
+      "upcoming": "Upcoming",
+      "today": "Today",
+      "complete": "All rated",
+      "past": "Past"
+    },
+    "reveal": {
+      "locked": "Scores are sealed",
+      "lockedBody": "Nobody can see ratings yet — not even you.",
+      "unlocked": "Results are ready",
+      "unlockedBody": "Every dinner is done and the ratings are in."
+    },
+    "delete": "Delete season",
+    "deleteConfirm": "Delete this season and all its ratings? This cannot be undone."
+  },
+  "event": {
+    "title": "Host day",
+    "hostedBy": "Hosted by {host}",
+    "scanToRate": "Guests: scan to rate tonight's dinner",
+    "orEnterCode": "or enter code at",
+    "rated": "{done} of {total} guests have rated",
+    "closed": "Everyone has rated — voting is closed. 🎉",
+    "backToSeason": "Back to season"
+  },
+  "join": {
+    "notFoundTitle": "Dinner not found",
+    "notFoundBody": "We couldn't find a dinner for that code. Double-check with your host.",
+    "closedTitle": "Voting is closed",
+    "closedBody": "All expected guests have already rated this dinner.",
+    "pickName": "Who are you?",
+    "pickHelp": "Pick your name to rate tonight's dinner.",
+    "hostNote": "{host} is hosting tonight and doesn't rate their own dinner.",
+    "alreadyVotedName": "already rated",
+    "alreadyVotedDevice": "You've already rated on this device.",
+    "rateTitle": "Rate {host}'s dinner",
+    "scoreHelp": "1 = poor · 10 = amazing",
+    "commentLabel": "Comment (optional)",
+    "commentPlaceholder": "A word for the host…",
+    "submit": "Submit rating",
+    "thanksTitle": "Thanks — your scores are sealed 🔒",
+    "thanksBody": "No peeking! Results reveal once the whole season is done."
+  },
+  "results": {
+    "lockedTitle": "Results are still sealed",
+    "lockedBody": "The leaderboard unlocks when every dinner has happened and all ratings are in.",
+    "pendingDates": "Not every dinner has happened yet.",
+    "pendingRatings": "Waiting on {n} more rating(s).",
+    "deadlineNote": "Auto-reveals on {date}.",
+    "title": "Leaderboard",
+    "subtitle": "Averages across all dinners.",
+    "winner": "Winner",
+    "total": "Total",
+    "of": "of",
+    "ratings": "{n} rating(s)",
+    "noRatings": "No ratings were submitted."
   },
   "footer": {
     "rights": "All rights reserved.",

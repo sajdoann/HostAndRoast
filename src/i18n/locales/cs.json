@@ -5,49 +5,123 @@
   },
   "nav": {
     "home": "Domů",
-    "dinners": "Večeře",
-    "host": "Staňte se hostitelem",
-    "signIn": "Přihlásit se"
+    "new": "Nová sezóna"
+  },
+  "common": {
+    "back": "Zpět",
+    "cancel": "Zrušit",
+    "save": "Uložit",
+    "host": "Hostitel",
+    "date": "Datum",
+    "code": "Kód",
+    "status": "Stav",
+    "copy": "Kopírovat odkaz",
+    "copied": "Zkopírováno!",
+    "open": "Otevřít"
+  },
+  "categories": {
+    "food": "Jídlo",
+    "atmosphere": "Pohostinnost a atmosféra",
+    "entertainment": "Zábava"
   },
   "home": {
-    "eyebrow": "Domácí kuchyně, hostěná srdcem",
-    "title": "Rezervujte si místo u opravdové pečené večeře.",
-    "subtitle": "Místní hostitelé otevírají své stoly. Vy si přinesete chuť. Teplé jídlo, dobrá společnost, žádná restaurace.",
-    "ctaPrimary": "Najít večeři",
-    "ctaSecondary": "Uspořádat večeři",
+    "eyebrow": "Večerní hra pro přátele",
+    "title": "Střídejte se v hostování. Ohodnoťte každou večeři. Odhalte vítěze.",
+    "subtitle": "Sezóna ve stylu Prostřeno: každý přítel uspořádá jednu večeři, hosté bodují jídlo, atmosféru a zábavu — a skóre zůstává zapečetěné až do úplného konce.",
+    "ctaPrimary": "Vytvořit sezónu",
+    "ctaJoin": "Připojit se k večeři",
+    "codePlaceholder": "Zadejte kód",
+    "codeGo": "Jít",
     "stepsTitle": "Jak to funguje",
     "steps": {
-      "browseTitle": "Prohlédněte",
-      "browseBody": "Objevte pečené večeře ve svém okolí, každou s vlastním menu a příběhem.",
-      "bookTitle": "Rezervujte",
-      "bookBody": "Zarezervujte si místo a bezpečně zaplaťte. Hostitel dostane hned upozornění.",
-      "feastTitle": "Hodujte",
-      "feastBody": "Přijďte hladoví. Sdílejte stůl, pečínku a večer, na který se nezapomíná."
-    },
-    "featuredTitle": "Stoly tohoto týdne"
-  },
-  "dinners": {
-    "title": "Nadcházející večeře",
-    "subtitle": "Vyberte si stůl. Míst je omezený počet.",
-    "seatsLeft": "zbývá {count} míst",
-    "perSeat": "za místo",
-    "book": "Rezervovat místo",
-    "empty": "Zatím zde nejsou žádné večeře — brzy se vraťte."
-  },
-  "host": {
-    "eyebrow": "Pro hostitele",
-    "title": "Proměňte svou kuchyni ve stůl, který stojí za rezervaci.",
-    "subtitle": "Sestavte menu, vyberte datum a přivítejte hosty. Rezervace i platby vyřídíme za vás.",
-    "cta": "Začít hostit",
-    "benefitsTitle": "Proč hostit s námi",
-    "benefits": {
-      "earnTitle": "Vydělávejte tím, co vás baví",
-      "earnBody": "Nastavte si vlastní cenu za místo a většinu si necháte.",
-      "toolsTitle": "Jednoduché nástroje",
-      "toolsBody": "Spravujte menu, termíny i seznam hostů na jednom místě.",
-      "communityTitle": "Poznejte své sousedy",
-      "communityBody": "Zaplňte svůj stůl lidmi, kteří milují dobré jídlo."
+      "createTitle": "1 · Vytvořte",
+      "createBody": "Přidejte přátele a určete, kdo kdy hostí. Každý dostane svůj termín.",
+      "hostTitle": "2 · Hostujte a hodnoťte",
+      "hostBody": "V den večeře hostitel ukáže QR kód. Hosté ho naskenují, vyberou své jméno a ohodnotí večer.",
+      "revealTitle": "3 · Odhalte",
+      "revealBody": "Skóre zůstává skryté — i před organizátorem — dokud neproběhnou všechny večeře. Pak se objeví žebříček."
     }
+  },
+  "new": {
+    "title": "Nová sezóna",
+    "seasonName": "Název sezóny",
+    "seasonNamePlaceholder": "např. Podzimní pečínka 2026",
+    "players": "Hráči",
+    "playersHelp": "Přidejte všechny, kdo budou hostit a hodnotit. Nejméně dva.",
+    "playerPlaceholder": "Jméno hráče",
+    "addPlayer": "Přidat hráče",
+    "remove": "Odebrat",
+    "startDate": "Datum první večeře",
+    "interval": "Dní mezi večeřemi",
+    "deadline": "Termín odhalení (nepovinné)",
+    "deadlineHelp": "Výsledky se odhalí automaticky po tomto datu, i když některá hodnocení chybí.",
+    "create": "Vytvořit sezónu",
+    "needPlayers": "Přidejte alespoň dva hráče.",
+    "needName": "Zadejte název sezóny."
+  },
+  "season": {
+    "schedule": "Rozpis",
+    "players": "Hráči",
+    "shareHint": "V den večeře otevřete její stránku a ukažte QR kód.",
+    "results": "Zobrazit výsledky",
+    "openHost": "Otevřít pohled hostitele",
+    "deadline": "Termín odhalení",
+    "rated": "{done}/{total} ohodnoceno",
+    "status": {
+      "upcoming": "Nadcházející",
+      "today": "Dnes",
+      "complete": "Vše ohodnoceno",
+      "past": "Proběhlo"
+    },
+    "reveal": {
+      "locked": "Skóre je zapečetěné",
+      "lockedBody": "Hodnocení zatím nikdo nevidí — ani vy.",
+      "unlocked": "Výsledky jsou připravené",
+      "unlockedBody": "Všechny večeře proběhly a hodnocení dorazila."
+    },
+    "delete": "Smazat sezónu",
+    "deleteConfirm": "Smazat tuto sezónu a všechna její hodnocení? Tuto akci nelze vrátit."
+  },
+  "event": {
+    "title": "Den hostitele",
+    "hostedBy": "Hostí {host}",
+    "scanToRate": "Hosté: naskenujte a ohodnoťte dnešní večeři",
+    "orEnterCode": "nebo zadejte kód na",
+    "rated": "{done} z {total} hostů ohodnotilo",
+    "closed": "Všichni ohodnotili — hlasování je uzavřeno. 🎉",
+    "backToSeason": "Zpět na sezónu"
+  },
+  "join": {
+    "notFoundTitle": "Večeře nenalezena",
+    "notFoundBody": "Pro tento kód jsme nenašli žádnou večeři. Ověřte ho u hostitele.",
+    "closedTitle": "Hlasování je uzavřeno",
+    "closedBody": "Všichni očekávaní hosté už tuto večeři ohodnotili.",
+    "pickName": "Kdo jste?",
+    "pickHelp": "Vyberte své jméno a ohodnoťte dnešní večeři.",
+    "hostNote": "{host} dnes hostí a svou vlastní večeři nehodnotí.",
+    "alreadyVotedName": "již ohodnotil(a)",
+    "alreadyVotedDevice": "Na tomto zařízení jste už hodnotili.",
+    "rateTitle": "Ohodnoťte večeři: {host}",
+    "scoreHelp": "1 = slabé · 10 = úžasné",
+    "commentLabel": "Komentář (nepovinné)",
+    "commentPlaceholder": "Vzkaz pro hostitele…",
+    "submit": "Odeslat hodnocení",
+    "thanksTitle": "Děkujeme — vaše skóre je zapečetěné 🔒",
+    "thanksBody": "Žádné nakukování! Výsledky se odhalí, až skončí celá sezóna."
+  },
+  "results": {
+    "lockedTitle": "Výsledky jsou stále zapečetěné",
+    "lockedBody": "Žebříček se odemkne, až proběhnou všechny večeře a dorazí všechna hodnocení.",
+    "pendingDates": "Zatím neproběhly všechny večeře.",
+    "pendingRatings": "Čeká se na {n} dalších hodnocení.",
+    "deadlineNote": "Automaticky se odhalí {date}.",
+    "title": "Žebříček",
+    "subtitle": "Průměry ze všech večeří.",
+    "winner": "Vítěz",
+    "total": "Celkem",
+    "of": "z",
+    "ratings": "{n} hodnocení",
+    "noRatings": "Nebyla odeslána žádná hodnocení."
   },
   "footer": {
     "rights": "Všechna práva vyhrazena.",
