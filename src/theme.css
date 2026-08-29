@@ -1,0 +1,34 @@
+/* Host & Roast — brand tokens, drawn from the logo (gold on ink & cream). */
+:root {
+  /* Gold */
+  --gold: #c99a3b;
+  --gold-light: #e7c56b;
+  --gold-dark: #b8862e;
+  --gold-gradient: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+
+  /* Neutrals */
+  --ink: #1a1a1a;
+  --ink-soft: #3a3a36;
+  --cream: #f5f1e8;
+  --cream-soft: #faf7f0;
+  --line: #e6dfce;
+  --white: #ffffff;
+
+  /* Text */
+  --text: var(--ink);
+  --text-muted: #6b6459;
+
+  /* Surface */
+  --bg: var(--cream-soft);
+  --surface: var(--white);
+
+  /* Type */
+  --font-body: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Georgia", "Times New Roman", serif;
+
+  /* Shape */
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 10px 30px rgba(26, 26, 26, 0.08);
+  --container: 1120px;
+}
