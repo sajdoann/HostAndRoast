@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Host & Roast — starter security rules.
+// TODO(rules): tighten before launch. These cover the core model:
+//   dinners (public read, host-owned write) and bookings (owner/host read).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Dinners are publicly browsable; only the host may create/edit their own.
+    match /dinners/{dinnerId} {
+      allow read: if true;
+      allow create: if isOwner(request.resource.data.hostId);
+      allow update, delete: if isOwner(resource.data.hostId);
+    }
+
+    // Bookings are private to the guest who made them and the host of the dinner.
+    // Writes are done server-side by Cloud Functions after payment — deny direct writes.
+    match /bookings/{bookingId} {
+      allow read: if isOwner(resource.data.guestId)
+                  || isOwner(resource.data.hostId);
+      allow write: if false;
+    }
+
+    // User profiles: readable by anyone, writable only by the owner.
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
+  }
+}
