@@ -12,7 +12,7 @@ const LOCAL_OWNER = "local";
 export default function NewSeason() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { user, required, signIn } = useAuth();
+  const { user, required, signIn, error: authError } = useAuth();
 
   const [name, setName] = useState("");
   const [names, setNames] = useState<string[]>(["", ""]);
@@ -64,6 +64,7 @@ export default function NewSeason() {
           <button className="btn btn-primary" onClick={() => void signIn()}>
             {t("auth.signInGoogle")}
           </button>
+          {authError && <p className="form-error">{authError}</p>}
         </div>
       </section>
     );
