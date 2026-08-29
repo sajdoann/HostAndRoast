@@ -5,6 +5,7 @@ import {
   getDocs,
   onSnapshot,
   query,
+  setDoc,
   updateDoc,
   where,
   writeBatch,
@@ -169,6 +170,21 @@ export function createFirestoreStore(): Store {
     return data;
   }
 
+  /**
+   * Bind "this account = this player" for a season. The claim is the identity
+   * that matters (auto-rating, editing your dinner) and is written on its own;
+   * the membership record is a separate best-effort write so a permission issue
+   * on it can never undo the claim.
+   */
+  function bindIdentity(seasonId: string, uid: string, playerId: string) {
+    void setDoc(doc(fdb, "seasons", seasonId, "claims", uid), { playerId }).catch(
+      onError("bindIdentity/claim")
+    );
+    void setDoc(doc(fdb, "users", uid, "memberships", seasonId), { seasonId }).catch(
+      onError("bindIdentity/membership")
+    );
+  }
+
   return {
     getState: () => state,
     isLoaded: () => ownerLoaded,
@@ -296,10 +312,7 @@ export function createFirestoreStore(): Store {
     },
 
     claimPlayer(seasonId: string, uid: string, playerId: string) {
-      const batch = writeBatch(fdb);
-      batch.set(doc(fdb, "seasons", seasonId, "claims", uid), { playerId });
-      batch.set(doc(fdb, "users", uid, "memberships", seasonId), { seasonId });
-      batch.commit().catch(onError("claimPlayer"));
+      bindIdentity(seasonId, uid, playerId);
     },
 
     deleteSeason(seasonId: string) {
@@ -344,13 +357,11 @@ export function createFirestoreStore(): Store {
         raterId: rating.raterId,
         createdAt: rating.createdAt,
       });
-      // A signed-in rater participates in this season → show it in their list.
-      if (viewerUid) {
-        batch.set(doc(fdb, "users", viewerUid, "memberships", season.id), {
-          seasonId: season.id,
-        });
-      }
       batch.commit().catch(onError("addRating"));
+      // Once a signed-in person rates as a nickname, that nickname is them for
+      // the season (and the season joins their list). Best-effort, separate
+      // from the rating write so it can't break it.
+      if (viewerUid) bindIdentity(season.id, viewerUid, rating.raterId);
     },
 
     getResults(seasonId: string) {
