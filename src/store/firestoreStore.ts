@@ -39,39 +39,56 @@ export function createFirestoreStore(): Store {
     listeners.forEach((l) => l());
   }
 
-  onSnapshot(collection(fdb, "seasons"), (snap) => {
-    state = {
-      ...state,
-      seasons: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Season, "id">) })),
-    };
-    notify();
-  });
+  // If a listener errors (e.g. Firestore not enabled yet, or rules not
+  // deployed), surface it — otherwise the app just shows empty data silently.
+  const onError = (where: string) => (err: unknown) =>
+    console.error(`[firestore] ${where} listener failed:`, err);
 
-  onSnapshot(collectionGroup(fdb, "receipts"), (snap) => {
-    state = {
-      ...state,
-      ratings: snap.docs.map((d) => {
-        const data = d.data() as { eventId: string; raterId: string; createdAt: number };
-        return {
-          id: d.id,
-          eventId: data.eventId,
-          raterId: data.raterId,
-          scores: { food: 0, atmosphere: 0, entertainment: 0 },
-          createdAt: data.createdAt,
-        } satisfies Rating;
-      }),
-    };
-    notify();
-  });
+  onSnapshot(
+    collection(fdb, "seasons"),
+    (snap) => {
+      state = {
+        ...state,
+        seasons: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Season, "id">) })),
+      };
+      notify();
+    },
+    onError("seasons")
+  );
 
-  onSnapshot(collection(fdb, "results"), (snap) => {
-    const next: Record<string, HostResult[]> = {};
-    snap.docs.forEach((d) => {
-      next[d.id] = (d.data() as { board: HostResult[] }).board ?? [];
-    });
-    results = next;
-    notify();
-  });
+  onSnapshot(
+    collectionGroup(fdb, "receipts"),
+    (snap) => {
+      state = {
+        ...state,
+        ratings: snap.docs.map((d) => {
+          const data = d.data() as { eventId: string; raterId: string; createdAt: number };
+          return {
+            id: d.id,
+            eventId: data.eventId,
+            raterId: data.raterId,
+            scores: { food: 0, atmosphere: 0, entertainment: 0 },
+            createdAt: data.createdAt,
+          } satisfies Rating;
+        }),
+      };
+      notify();
+    },
+    onError("receipts")
+  );
+
+  onSnapshot(
+    collection(fdb, "results"),
+    (snap) => {
+      const next: Record<string, HostResult[]> = {};
+      snap.docs.forEach((d) => {
+        next[d.id] = (d.data() as { board: HostResult[] }).board ?? [];
+      });
+      results = next;
+      notify();
+    },
+    onError("results")
+  );
 
   function seasonDoc(season: Season) {
     const data: Record<string, unknown> = {
