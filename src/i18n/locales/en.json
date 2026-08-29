@@ -24,7 +24,8 @@
     "status": "Status",
     "copy": "Copy link",
     "copied": "Copied!",
-    "open": "Open"
+    "open": "Open",
+    "loading": "Loading…"
   },
   "categories": {
     "food": "Food",
@@ -92,7 +93,9 @@
     },
     "delete": "Delete season",
     "deleteConfirm": "Delete this season and all its ratings? This cannot be undone.",
-    "readOnly": "Only the organizer can edit this season."
+    "readOnly": "Only the organizer can edit this season.",
+    "ownerOnlyTitle": "Organizer only",
+    "ownerOnlyBody": "Only the organizer who created this season can view its schedule. Guests: use the link or QR your host shares."
   },
   "event": {
     "title": "Host day",

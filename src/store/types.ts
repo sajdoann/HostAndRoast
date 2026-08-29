@@ -20,6 +20,13 @@ export interface Store {
   getState(): DB;
   subscribe(listener: () => void): () => void;
 
+  /**
+   * Whether the initial data has arrived. localStorage is instant (always
+   * true); Firestore flips this true after the first seasons snapshot, so
+   * pages can show a loading state instead of a premature "not found".
+   */
+  isLoaded(): boolean;
+
   createSeason(season: Season): void;
   updateSeason(season: Season): void;
   deleteSeason(seasonId: string): void;

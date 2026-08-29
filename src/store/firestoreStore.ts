@@ -33,6 +33,7 @@ export function createFirestoreStore(): Store {
   // (eventId, raterId) matter for counting; the real scores stay server-side.
   let state: DB = { seasons: [], ratings: [] };
   let results: Record<string, HostResult[]> = {};
+  let loaded = false; // true once the first seasons snapshot arrives
   const listeners = new Set<() => void>();
 
   function notify() {
@@ -51,6 +52,7 @@ export function createFirestoreStore(): Store {
         ...state,
         seasons: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Season, "id">) })),
       };
+      loaded = true;
       notify();
     },
     onError("seasons")
@@ -104,6 +106,8 @@ export function createFirestoreStore(): Store {
 
   return {
     getState: () => state,
+
+    isLoaded: () => loaded,
 
     subscribe(listener) {
       listeners.add(listener);

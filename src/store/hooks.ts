@@ -8,6 +8,11 @@ export function useDB(): DB {
   return useSyncExternalStore(store.subscribe, store.getState, store.getState);
 }
 
+/** True once initial data has loaded (always true in localStorage mode). */
+export function useLoaded(): boolean {
+  return useSyncExternalStore(store.subscribe, store.isLoaded, store.isLoaded);
+}
+
 export function useSeasons(): Season[] {
   return useDB().seasons;
 }

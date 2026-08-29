@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
-import { useDB } from "../store/hooks";
+import { useDB, useLoaded } from "../store/hooks";
+import Loading from "../components/Loading";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
 import { expectedRatings, isEventComplete, ratingsForEvent } from "../domain/reveal";
@@ -9,9 +10,12 @@ export default function EventDay() {
   const { t } = useI18n();
   const { id } = useParams();
   const { seasons, ratings } = useDB();
+  const loaded = useLoaded();
 
   const season = seasons.find((s) => s.events.some((e) => e.id === id));
   const event = season?.events.find((e) => e.id === id);
+
+  if (!loaded) return <Loading />;
 
   if (!season || !event) {
     return (

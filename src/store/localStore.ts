@@ -39,6 +39,8 @@ function createLocalStore(): Store {
   return {
     getState: () => state,
 
+    isLoaded: () => true,
+
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);

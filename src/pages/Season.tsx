@@ -2,7 +2,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
-import { useSeason, useSeasonRatings } from "../store/hooks";
+import { useLoaded, useSeason, useSeasonRatings } from "../store/hooks";
+import Loading from "../components/Loading";
 import { todayISO } from "../domain/schedule";
 import {
   expectedRatings,
@@ -22,11 +23,14 @@ function statusKey(event: DinnerEvent, season: SeasonModel, ratingsIn: number): 
 
 export default function Season() {
   const { t, lang } = useI18n();
-  const { user, required } = useAuth();
+  const { user, required, loading: authLoading } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const season = useSeason(id);
   const ratings = useSeasonRatings(season);
+  const loaded = useLoaded();
+
+  if (!loaded || (required && authLoading)) return <Loading />;
 
   if (!season) {
     return (
@@ -41,13 +45,27 @@ export default function Season() {
     );
   }
 
+  // The season dashboard (full schedule + all join codes) is organizer-only.
+  const isOwner = !required || (!!user && season.ownerId === user.uid);
+  if (!isOwner) {
+    return (
+      <section className="section">
+        <div className="container center-narrow">
+          <div className="lock-badge">🔒</div>
+          <h1 className="section-title">{t("season.ownerOnlyTitle")}</h1>
+          <p className="muted">{t("season.ownerOnlyBody")}</p>
+          <Link to="/" className="btn btn-primary">
+            {t("notFound.back")}
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   const reveal = revealStatus(season, ratings);
-  const canManage = !required || (!!user && season.ownerId === user.uid);
   const hostName = (hostId: string) =>
     season.players.find((p) => p.id === hostId)?.name ?? "—";
   const events = [...season.events].sort((a, b) => a.date.localeCompare(b.date));
-  const dateLabel = (iso: string) =>
-    new Date(`${iso}T00:00:00`).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-GB");
 
   function editDate(eventId: string, date: string) {
     if (!season || !date) return;
@@ -100,16 +118,12 @@ export default function Season() {
                   <strong>{hostName(event.hostId)}</strong>
                   <span className={`pill pill-${key}`}>{t(`season.status.${key}`)}</span>
                 </div>
-                {canManage ? (
-                  <input
-                    className="schedule-date"
-                    type="date"
-                    value={event.date}
-                    onChange={(e) => editDate(event.id, e.target.value)}
-                  />
-                ) : (
-                  <span className="schedule-date muted">{dateLabel(event.date)}</span>
-                )}
+                <input
+                  className="schedule-date"
+                  type="date"
+                  value={event.date}
+                  onChange={(e) => editDate(event.id, e.target.value)}
+                />
                 <div className="schedule-meta muted">
                   <code>{event.code}</code> · {t("season.rated", { done: count, total: expected })}
                 </div>
@@ -136,15 +150,11 @@ export default function Season() {
           </p>
         )}
 
-        {canManage ? (
-          <div className="season-footer">
-            <button className="btn btn-ghost btn-sm danger" onClick={remove}>
-              {t("season.delete")}
-            </button>
-          </div>
-        ) : (
-          <p className="muted small season-footer">{t("season.readOnly")}</p>
-        )}
+        <div className="season-footer">
+          <button className="btn btn-ghost btn-sm danger" onClick={remove}>
+            {t("season.delete")}
+          </button>
+        </div>
       </div>
     </section>
   );

@@ -2,7 +2,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { store } from "../store";
-import { useDB } from "../store/hooks";
+import { useDB, useLoaded } from "../store/hooks";
+import Loading from "../components/Loading";
 import ScoreSlider from "../components/ScoreSlider";
 import { CATEGORIES } from "../domain/categories";
 import { isEventComplete, ratingsForEvent } from "../domain/reveal";
@@ -21,6 +22,7 @@ export default function Join() {
   const { t } = useI18n();
   const { code } = useParams();
   const { seasons, ratings } = useDB();
+  const loaded = useLoaded();
 
   const target = useMemo(() => store.findByCode(code ?? ""), [code, seasons]);
   const [raterId, setRaterId] = useState<string | null>(null);
@@ -31,6 +33,8 @@ export default function Join() {
   });
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  if (!loaded) return <Loading />;
 
   if (!target) {
     return centre(

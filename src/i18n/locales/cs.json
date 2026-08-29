@@ -24,7 +24,8 @@
     "status": "Stav",
     "copy": "Kopírovat odkaz",
     "copied": "Zkopírováno!",
-    "open": "Otevřít"
+    "open": "Otevřít",
+    "loading": "Načítání…"
   },
   "categories": {
     "food": "Jídlo",
@@ -92,7 +93,9 @@
     },
     "delete": "Smazat sezónu",
     "deleteConfirm": "Smazat tuto sezónu a všechna její hodnocení? Tuto akci nelze vrátit.",
-    "readOnly": "Sezónu může upravovat pouze organizátor."
+    "readOnly": "Sezónu může upravovat pouze organizátor.",
+    "ownerOnlyTitle": "Pouze organizátor",
+    "ownerOnlyBody": "Rozpis této sezóny vidí pouze organizátor, který ji vytvořil. Hosté: použijte odkaz nebo QR kód od svého hostitele."
   },
   "event": {
     "title": "Den hostitele",
