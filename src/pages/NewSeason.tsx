@@ -1,14 +1,18 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
+import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
 import { genId } from "../domain/ids";
 import { buildSchedule, todayISO } from "../domain/schedule";
 import type { Player, Season } from "../domain/types";
 
+const LOCAL_OWNER = "local";
+
 export default function NewSeason() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { user, required, signIn } = useAuth();
 
   const [name, setName] = useState("");
   const [names, setNames] = useState<string[]>(["", ""]);
@@ -33,11 +37,14 @@ export default function NewSeason() {
     if (!name.trim()) return setError(t("new.needName"));
     if (clean.length < 2) return setError(t("new.needPlayers"));
 
+    if (required && !user) return setError(t("auth.needSignIn"));
+
     const players: Player[] = clean.map((n) => ({ id: genId(), name: n }));
     const seasonId = genId();
     const season: Season = {
       id: seasonId,
       name: name.trim(),
+      ownerId: user?.uid ?? LOCAL_OWNER,
       players,
       events: buildSchedule(seasonId, players, startDate, interval),
       revealAt: deadline ? new Date(`${deadline}T23:59:59`).getTime() : undefined,
@@ -46,6 +53,20 @@ export default function NewSeason() {
 
     store.createSeason(season);
     navigate(`/season/${seasonId}`);
+  }
+
+  if (required && !user) {
+    return (
+      <section className="section">
+        <div className="container narrow center-narrow">
+          <h1 className="section-title">{t("new.title")}</h1>
+          <p className="muted">{t("auth.signInToCreate")}</p>
+          <button className="btn btn-primary" onClick={() => void signIn()}>
+            {t("auth.signInGoogle")}
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (

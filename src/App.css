@@ -42,6 +42,17 @@
   gap: 12px;
   margin-left: auto;
 }
+.auth-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
 
 /* Language switcher */
 .lang-switch {

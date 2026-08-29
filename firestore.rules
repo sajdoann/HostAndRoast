@@ -18,10 +18,14 @@ service cloud.firestore {
 
     // Season doc: schedule, players and public join codes.
     // Publicly readable so guests can join by code without an account.
+    // Only the signed-in organizer who created it may change or delete it —
+    // participants can't touch anyone's season.
     match /seasons/{seasonId} {
       allow read: if true;
-      // TODO(auth): restrict to the organizer. Open for the no-backend prototype.
-      allow write: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid;
 
       // Ratings live in a subcollection and are write-once, read-never.
       // Deterministic id "<eventId>_<raterId>" makes a second submission an

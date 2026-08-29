@@ -1,15 +1,24 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
+import { useAuth } from "../auth/useAuth";
 import Logo from "../components/Logo";
 import { useDB } from "../store/hooks";
 import { revealStatus } from "../domain/reveal";
 
 export default function Home() {
   const { t } = useI18n();
+  const { user, required } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const { seasons, ratings } = useDB();
+
+  // In Firebase mode the store holds everyone's seasons — show only mine.
+  const mySeasons = required
+    ? user
+      ? seasons.filter((s) => s.ownerId === user.uid)
+      : []
+    : seasons;
 
   const steps = ["create", "host", "reveal"] as const;
 
@@ -47,12 +56,12 @@ export default function Home() {
         </div>
       </section>
 
-      {seasons.length > 0 && (
+      {mySeasons.length > 0 && (
         <section className="section section-alt">
           <div className="container">
             <h2 className="section-title">{t("home.yourSeasons")}</h2>
             <div className="season-list">
-              {[...seasons]
+              {[...mySeasons]
                 .sort((a, b) => b.createdAt - a.createdAt)
                 .map((season) => {
                   const ready = revealStatus(season, ratings).revealed;

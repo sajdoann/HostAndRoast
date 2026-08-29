@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
+import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
 import { useSeason, useSeasonRatings } from "../store/hooks";
 import { todayISO } from "../domain/schedule";
@@ -21,6 +22,7 @@ function statusKey(event: DinnerEvent, season: SeasonModel, ratingsIn: number): 
 
 export default function Season() {
   const { t, lang } = useI18n();
+  const { user, required } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const season = useSeason(id);
@@ -40,9 +42,12 @@ export default function Season() {
   }
 
   const reveal = revealStatus(season, ratings);
+  const canManage = !required || (!!user && season.ownerId === user.uid);
   const hostName = (hostId: string) =>
     season.players.find((p) => p.id === hostId)?.name ?? "—";
   const events = [...season.events].sort((a, b) => a.date.localeCompare(b.date));
+  const dateLabel = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-GB");
 
   function editDate(eventId: string, date: string) {
     if (!season || !date) return;
@@ -95,12 +100,16 @@ export default function Season() {
                   <strong>{hostName(event.hostId)}</strong>
                   <span className={`pill pill-${key}`}>{t(`season.status.${key}`)}</span>
                 </div>
-                <input
-                  className="schedule-date"
-                  type="date"
-                  value={event.date}
-                  onChange={(e) => editDate(event.id, e.target.value)}
-                />
+                {canManage ? (
+                  <input
+                    className="schedule-date"
+                    type="date"
+                    value={event.date}
+                    onChange={(e) => editDate(event.id, e.target.value)}
+                  />
+                ) : (
+                  <span className="schedule-date muted">{dateLabel(event.date)}</span>
+                )}
                 <div className="schedule-meta muted">
                   <code>{event.code}</code> · {t("season.rated", { done: count, total: expected })}
                 </div>
@@ -127,11 +136,15 @@ export default function Season() {
           </p>
         )}
 
-        <div className="season-footer">
-          <button className="btn btn-ghost btn-sm danger" onClick={remove}>
-            {t("season.delete")}
-          </button>
-        </div>
+        {canManage ? (
+          <div className="season-footer">
+            <button className="btn btn-ghost btn-sm danger" onClick={remove}>
+              {t("season.delete")}
+            </button>
+          </div>
+        ) : (
+          <p className="muted small season-footer">{t("season.readOnly")}</p>
+        )}
       </div>
     </section>
   );

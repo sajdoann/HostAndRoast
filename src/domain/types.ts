@@ -38,6 +38,8 @@ export interface Rating {
 export interface Season {
   id: string;
   name: string;
+  /** uid of the organizer who created it; only they may edit or delete it. */
+  ownerId: string;
   players: Player[];
   events: DinnerEvent[];
   /** Deadline after which results reveal even if some ratings are missing. */

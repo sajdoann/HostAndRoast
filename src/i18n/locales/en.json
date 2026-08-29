@@ -7,6 +7,13 @@
     "home": "Home",
     "new": "New season"
   },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signInGoogle": "Sign in with Google",
+    "signInToCreate": "Sign in to create and manage your season.",
+    "needSignIn": "Please sign in first."
+  },
   "common": {
     "back": "Back",
     "cancel": "Cancel",
@@ -84,7 +91,8 @@
       "unlockedBody": "Every dinner is done and the ratings are in."
     },
     "delete": "Delete season",
-    "deleteConfirm": "Delete this season and all its ratings? This cannot be undone."
+    "deleteConfirm": "Delete this season and all its ratings? This cannot be undone.",
+    "readOnly": "Only the organizer can edit this season."
   },
   "event": {
     "title": "Host day",

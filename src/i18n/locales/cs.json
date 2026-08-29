@@ -7,6 +7,13 @@
     "home": "Domů",
     "new": "Nová sezóna"
   },
+  "auth": {
+    "signIn": "Přihlásit se",
+    "signOut": "Odhlásit se",
+    "signInGoogle": "Přihlásit se přes Google",
+    "signInToCreate": "Přihlaste se, abyste mohli vytvořit a spravovat sezónu.",
+    "needSignIn": "Nejprve se prosím přihlaste."
+  },
   "common": {
     "back": "Zpět",
     "cancel": "Zrušit",
@@ -84,7 +91,8 @@
       "unlockedBody": "Všechny večeře proběhly a hodnocení dorazila."
     },
     "delete": "Smazat sezónu",
-    "deleteConfirm": "Smazat tuto sezónu a všechna její hodnocení? Tuto akci nelze vrátit."
+    "deleteConfirm": "Smazat tuto sezónu a všechna její hodnocení? Tuto akci nelze vrátit.",
+    "readOnly": "Sezónu může upravovat pouze organizátor."
   },
   "event": {
     "title": "Den hostitele",

@@ -93,6 +93,7 @@ export function createFirestoreStore(): Store {
   function seasonDoc(season: Season) {
     const data: Record<string, unknown> = {
       name: season.name,
+      ownerId: season.ownerId,
       players: season.players,
       events: season.events,
       createdAt: season.createdAt,
