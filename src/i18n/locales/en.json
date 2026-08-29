@@ -1,0 +1,61 @@
+{
+  "brand": {
+    "name": "Host & Roast",
+    "tagline": "A guest is a treasure."
+  },
+  "nav": {
+    "home": "Home",
+    "dinners": "Dinners",
+    "host": "Become a host",
+    "signIn": "Sign in"
+  },
+  "home": {
+    "eyebrow": "Home-cooked, hosted with heart",
+    "title": "Book a seat at a real roast dinner.",
+    "subtitle": "Local hosts open their tables. You bring your appetite. Warm food, good company, no restaurant in sight.",
+    "ctaPrimary": "Find a dinner",
+    "ctaSecondary": "Host a dinner",
+    "stepsTitle": "How it works",
+    "steps": {
+      "browseTitle": "Browse",
+      "browseBody": "Discover roast dinners hosted near you, each with a menu and a story.",
+      "bookTitle": "Book",
+      "bookBody": "Reserve your seat and pay securely. Your host gets notified right away.",
+      "feastTitle": "Feast",
+      "feastBody": "Show up hungry. Share a table, a roast, and an evening worth remembering."
+    },
+    "featuredTitle": "This week's tables"
+  },
+  "dinners": {
+    "title": "Upcoming dinners",
+    "subtitle": "Pick a table. Seats are limited.",
+    "seatsLeft": "{count} seats left",
+    "perSeat": "per seat",
+    "book": "Book a seat",
+    "empty": "No dinners listed yet — check back soon."
+  },
+  "host": {
+    "eyebrow": "For hosts",
+    "title": "Turn your kitchen into a table worth booking.",
+    "subtitle": "Set your menu, pick a date, and welcome guests. We handle bookings and payments.",
+    "cta": "Start hosting",
+    "benefitsTitle": "Why host with us",
+    "benefits": {
+      "earnTitle": "Earn from what you love",
+      "earnBody": "Set your own price per seat and keep the majority.",
+      "toolsTitle": "Simple tools",
+      "toolsBody": "Manage your menu, dates, and guest list in one place.",
+      "communityTitle": "Meet your neighbours",
+      "communityBody": "Fill your table with people who love good food."
+    }
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "madeWith": "Cooked up with care."
+  },
+  "notFound": {
+    "title": "This table is empty.",
+    "body": "The page you're looking for isn't on the menu.",
+    "back": "Back home"
+  }
+}

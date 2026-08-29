@@ -1,0 +1,61 @@
+{
+  "brand": {
+    "name": "Host je skvost",
+    "tagline": "Host je skvost."
+  },
+  "nav": {
+    "home": "Domů",
+    "dinners": "Večeře",
+    "host": "Staňte se hostitelem",
+    "signIn": "Přihlásit se"
+  },
+  "home": {
+    "eyebrow": "Domácí kuchyně, hostěná srdcem",
+    "title": "Rezervujte si místo u opravdové pečené večeře.",
+    "subtitle": "Místní hostitelé otevírají své stoly. Vy si přinesete chuť. Teplé jídlo, dobrá společnost, žádná restaurace.",
+    "ctaPrimary": "Najít večeři",
+    "ctaSecondary": "Uspořádat večeři",
+    "stepsTitle": "Jak to funguje",
+    "steps": {
+      "browseTitle": "Prohlédněte",
+      "browseBody": "Objevte pečené večeře ve svém okolí, každou s vlastním menu a příběhem.",
+      "bookTitle": "Rezervujte",
+      "bookBody": "Zarezervujte si místo a bezpečně zaplaťte. Hostitel dostane hned upozornění.",
+      "feastTitle": "Hodujte",
+      "feastBody": "Přijďte hladoví. Sdílejte stůl, pečínku a večer, na který se nezapomíná."
+    },
+    "featuredTitle": "Stoly tohoto týdne"
+  },
+  "dinners": {
+    "title": "Nadcházející večeře",
+    "subtitle": "Vyberte si stůl. Míst je omezený počet.",
+    "seatsLeft": "zbývá {count} míst",
+    "perSeat": "za místo",
+    "book": "Rezervovat místo",
+    "empty": "Zatím zde nejsou žádné večeře — brzy se vraťte."
+  },
+  "host": {
+    "eyebrow": "Pro hostitele",
+    "title": "Proměňte svou kuchyni ve stůl, který stojí za rezervaci.",
+    "subtitle": "Sestavte menu, vyberte datum a přivítejte hosty. Rezervace i platby vyřídíme za vás.",
+    "cta": "Začít hostit",
+    "benefitsTitle": "Proč hostit s námi",
+    "benefits": {
+      "earnTitle": "Vydělávejte tím, co vás baví",
+      "earnBody": "Nastavte si vlastní cenu za místo a většinu si necháte.",
+      "toolsTitle": "Jednoduché nástroje",
+      "toolsBody": "Spravujte menu, termíny i seznam hostů na jednom místě.",
+      "communityTitle": "Poznejte své sousedy",
+      "communityBody": "Zaplňte svůj stůl lidmi, kteří milují dobré jídlo."
+    }
+  },
+  "footer": {
+    "rights": "Všechna práva vyhrazena.",
+    "madeWith": "Uvařeno s láskou."
+  },
+  "notFound": {
+    "title": "Tento stůl je prázdný.",
+    "body": "Stránka, kterou hledáte, není na menu.",
+    "back": "Zpět domů"
+  }
+}
