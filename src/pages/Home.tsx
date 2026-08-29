@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
+import Logo from "../components/Logo";
 
 export default function Home() {
   const { t } = useI18n();
@@ -19,6 +20,7 @@ export default function Home() {
     <>
       <section className="hero">
         <div className="container hero-inner">
+          <Logo className="hero-logo" />
           <p className="eyebrow">{t("home.eyebrow")}</p>
           <h1 className="hero-title">{t("home.title")}</h1>
           <p className="hero-subtitle">{t("home.subtitle")}</p>

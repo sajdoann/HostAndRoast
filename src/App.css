@@ -10,8 +10,9 @@
 
 /* Header */
 .site-header {
-  background: var(--ink);
-  color: var(--cream);
+  background: var(--cream-soft);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -20,24 +21,16 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 66px;
+  height: 68px;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
 }
-.brand-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--gold-gradient);
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 0.82rem;
+.brand-logo {
+  height: 46px;
+  width: auto;
+  display: block;
 }
 .brand-name {
   font-family: var(--font-display);
@@ -53,13 +46,14 @@
 /* Language switcher */
 .lang-switch {
   display: inline-flex;
-  border: 1px solid rgba(245, 241, 232, 0.3);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  background: var(--white);
 }
 .lang-switch button {
   background: transparent;
-  color: var(--cream);
+  color: var(--text);
   border: none;
   padding: 6px 10px;
   font-size: 0.78rem;
@@ -91,8 +85,15 @@
   border-bottom: 1px solid var(--line);
 }
 .hero-inner {
-  padding: 80px 20px;
+  padding: 72px 20px;
   max-width: 760px;
+}
+.hero-logo {
+  width: 200px;
+  max-width: 56%;
+  height: auto;
+  display: block;
+  margin: 0 0 12px -6px;
 }
 .hero-title {
   font-size: clamp(2rem, 5vw, 3.1rem);
