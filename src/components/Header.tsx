@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useI18n } from "../i18n";
 import Logo from "./Logo";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -15,9 +15,6 @@ export default function Header() {
         </Link>
 
         <div className="header-actions">
-          <NavLink to="/new" className="btn btn-primary btn-sm">
-            + {t("nav.new")}
-          </NavLink>
           <AuthButton />
           <LanguageSwitcher />
         </div>
