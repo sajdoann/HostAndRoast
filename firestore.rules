@@ -33,15 +33,17 @@ service cloud.firestore {
                       && validScore(scores().entertainment);
         allow update, delete: if false;
       }
+    }
 
-      // Receipts carry NO scores — just who rated — so the client can show
-      // "3 of 5 rated" and evaluate the reveal condition without leaking scores.
-      // Written together with the rating (same deterministic id), write-once.
-      match /receipts/{receiptId} {
-        allow read: if true;
-        allow create: if true;
-        allow update, delete: if false;
-      }
+    // Receipts carry NO scores — just who rated — so the client can show
+    // "3 of 5 rated" and evaluate the reveal condition without leaking scores.
+    // Written together with the rating (same deterministic id), write-once.
+    // A recursive match is required so the client's collectionGroup("receipts")
+    // listener is authorized (a nested-only rule would be denied).
+    match /{path=**}/receipts/{receiptId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
     }
 
     // Published leaderboard — exists only after reveal, written by a Function.

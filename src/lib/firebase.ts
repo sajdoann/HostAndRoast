@@ -16,6 +16,20 @@ let db: Firestore | null = null;
 if (firebaseEnabled) {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
+
+  // Analytics is optional and browser-only; load it lazily so it never bloats
+  // the bundle or breaks non-browser environments.
+  if (firebaseConfig.measurementId && typeof window !== "undefined") {
+    import("firebase/analytics")
+      .then(({ getAnalytics, isSupported }) =>
+        isSupported().then((ok) => {
+          if (ok && app) getAnalytics(app);
+        })
+      )
+      .catch(() => {
+        /* analytics unavailable — ignore */
+      });
+  }
 }
 
 export { app, db };
