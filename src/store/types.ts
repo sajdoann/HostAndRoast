@@ -6,6 +6,8 @@ export interface DB {
   ratings: Rating[];
   /** The current viewer's claimed identity per season: seasonId → playerId. */
   myClaims: Record<string, string>;
+  /** Season ids the viewer participates in (claimed or rated while signed in). */
+  myMemberships: string[];
 }
 
 /** Whether a join code has been resolved yet. */

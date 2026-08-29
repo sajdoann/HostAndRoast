@@ -11,12 +11,13 @@ export default function Home() {
   const { user, required } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
-  const { seasons, ratings } = useDB();
+  const { seasons, ratings, myMemberships } = useDB();
 
-  // In Firebase mode the store holds everyone's seasons — show only mine.
+  // In Firebase mode the store holds seasons loaded on demand — show the ones
+  // I own or participate in (claimed a nickname or rated while signed in).
   const mySeasons = required
     ? user
-      ? seasons.filter((s) => s.ownerId === user.uid)
+      ? seasons.filter((s) => s.ownerId === user.uid || myMemberships.includes(s.id))
       : []
     : seasons;
 

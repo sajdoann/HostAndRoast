@@ -9,7 +9,7 @@ import type { CodeState, DB, Store } from "./types";
  */
 
 const KEY = "hr.db.v1";
-const EMPTY: DB = { seasons: [], ratings: [], myClaims: {} };
+const EMPTY: DB = { seasons: [], ratings: [], myClaims: {}, myMemberships: [] };
 
 function load(): DB {
   try {
@@ -20,6 +20,7 @@ function load(): DB {
       seasons: parsed.seasons ?? [],
       ratings: parsed.ratings ?? [],
       myClaims: parsed.myClaims ?? {},
+      myMemberships: parsed.myMemberships ?? [],
     };
   } catch {
     return EMPTY;
@@ -105,6 +106,7 @@ function createLocalStore(): Store {
           (r) => !removed?.events.some((e) => e.id === r.eventId)
         ),
         myClaims,
+        myMemberships: state.myMemberships.filter((s) => s !== seasonId),
       });
     },
 

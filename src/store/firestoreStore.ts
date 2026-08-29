@@ -5,7 +5,6 @@ import {
   getDocs,
   onSnapshot,
   query,
-  setDoc,
   updateDoc,
   where,
   writeBatch,
@@ -43,12 +42,14 @@ export function createFirestoreStore(): Store {
   const subs = new Map<string, Array<() => void>>();
   const claimSubs = new Map<string, () => void>(); // viewer's claim doc, per season
   const myClaims: Record<string, string> = {}; // seasonId → playerId (current viewer)
+  const memberships = new Set<string>(); // seasons the viewer participates in
   const codeToSeason = new Map<string, string | null>(); // null = not found
   let ownerUnsub: (() => void) | null = null;
+  let membershipUnsub: (() => void) | null = null;
   let ownerLoaded = false;
   let viewerUid: string | null = null;
 
-  let state: DB = { seasons: [], ratings: [], myClaims: {} };
+  let state: DB = { seasons: [], ratings: [], myClaims: {}, myMemberships: [] };
   const listeners = new Set<() => void>();
 
   const onError = (where: string) => (err: unknown) =>
@@ -64,7 +65,7 @@ export function createFirestoreStore(): Store {
     }
     const ratings: Rating[] = [];
     for (const list of receiptsBySeason.values()) ratings.push(...list);
-    state = { seasons, ratings, myClaims: { ...myClaims } };
+    state = { seasons, ratings, myClaims: { ...myClaims }, myMemberships: [...memberships] };
     listeners.forEach((l) => l());
   }
 
@@ -192,6 +193,9 @@ export function createFirestoreStore(): Store {
       viewerUid = uid;
       // Re-point every loaded season's claim subscription at the new viewer.
       for (const seasonId of subs.keys()) subscribeClaim(seasonId);
+      membershipUnsub?.();
+      membershipUnsub = null;
+      memberships.clear();
       ownerUnsub?.();
       ownerUnsub = null;
       ownerLoaded = false;
@@ -200,6 +204,19 @@ export function createFirestoreStore(): Store {
         rebuild();
         return;
       }
+      // Seasons the viewer participates in (claimed or rated while signed in).
+      membershipUnsub = onSnapshot(
+        collection(fdb, "users", uid, "memberships"),
+        (snap) => {
+          memberships.clear();
+          snap.docs.forEach((d) => {
+            memberships.add(d.id);
+            ensureSeason(d.id);
+          });
+          rebuild();
+        },
+        onError("memberships")
+      );
       ownerUnsub = onSnapshot(
         query(collection(fdb, "seasons"), where("ownerId", "==", uid)),
         (snap) => {
@@ -279,9 +296,10 @@ export function createFirestoreStore(): Store {
     },
 
     claimPlayer(seasonId: string, uid: string, playerId: string) {
-      void setDoc(doc(fdb, "seasons", seasonId, "claims", uid), { playerId }).catch(
-        onError("claimPlayer")
-      );
+      const batch = writeBatch(fdb);
+      batch.set(doc(fdb, "seasons", seasonId, "claims", uid), { playerId });
+      batch.set(doc(fdb, "users", uid, "memberships", seasonId), { seasonId });
+      batch.commit().catch(onError("claimPlayer"));
     },
 
     deleteSeason(seasonId: string) {
@@ -326,6 +344,12 @@ export function createFirestoreStore(): Store {
         raterId: rating.raterId,
         createdAt: rating.createdAt,
       });
+      // A signed-in rater participates in this season → show it in their list.
+      if (viewerUid) {
+        batch.set(doc(fdb, "users", viewerUid, "memberships", season.id), {
+          seasonId: season.id,
+        });
+      }
       batch.commit().catch(onError("addRating"));
     },
 

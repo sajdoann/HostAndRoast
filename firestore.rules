@@ -85,5 +85,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    // Private per-user index of seasons they participate in.
+    match /users/{uid}/memberships/{seasonId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }
