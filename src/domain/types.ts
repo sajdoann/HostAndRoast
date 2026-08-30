@@ -1,6 +1,6 @@
 /**
  * Core domain model for the Host & Roast rating game
- * (a Prostřeno! / "Come Dine With Me" style season among friends).
+ * (a take-turns-hosting dinner game among friends).
  *
  * A Season has a fixed list of players. Each player hosts one Dinner Event on
  * their date (round-robin — one host per day). Guests rate every dinner they
