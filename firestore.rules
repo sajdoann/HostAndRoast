@@ -17,9 +17,15 @@ service cloud.firestore {
 
     // The player id the signed-in user claimed in this season (or null).
     function claimedPlayer(sid) {
-      return exists(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid))
+      return request.auth != null
+        && exists(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid))
         ? get(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid)).data.playerId
         : null;
+    }
+
+    function isOwner(sid) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/seasons/$(sid)).data.ownerId == request.auth.uid;
     }
 
     match /seasons/{sid} {
@@ -84,10 +90,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Published leaderboard — written by a Cloud Function on reveal.
-    match /results/{seasonId} {
-      allow read: if true;
+    // Published results — written only by the reveal server (admin).
+    match /results/{sid} {
+      allow read: if true;   // public leaderboard + per-category winners
       allow write: if false;
+
+      // A dinner's comments: readable by that dinner's cook or the owner.
+      match /feedback/{hostId} {
+        allow read: if claimedPlayer(sid) == hostId || isOwner(sid);
+        allow write: if false;
+      }
+
+      // A rater's own scores: readable by that player or the owner.
+      match /raters/{playerId} {
+        allow read: if claimedPlayer(sid) == playerId || isOwner(sid);
+        allow write: if false;
+      }
     }
 
     // Private per-user index of seasons they participate in.

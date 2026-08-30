@@ -1,5 +1,5 @@
 import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
-import type { HostResult } from "../domain/scoring";
+import type { HostResult, RaterStats } from "../domain/scoring";
 
 export interface DB {
   seasons: Season[];
@@ -8,6 +8,8 @@ export interface DB {
   myClaims: Record<string, string>;
   /** Season ids the viewer participates in (claimed or rated while signed in). */
   myMemberships: string[];
+  /** Season ids whose results have been revealed. */
+  revealed: string[];
 }
 
 /** Whether a join code has been resolved yet. */
@@ -56,5 +58,13 @@ export interface Store {
    * after, best-effort.
    */
   addRating(rating: Rating): Promise<void>;
+
+  /** The public leaderboard once revealed, else null. */
   getResults(seasonId: string): HostResult[] | null;
+  /** Owner-only: compute and publish the results (winner + stats + feedback). */
+  revealSeason(seasonId: string): Promise<void>;
+  /** Comments on one dinner (cook of that host / owner only). */
+  getFeedback(seasonId: string, hostId: string): Promise<string[] | null>;
+  /** One rater's own scores (that player / owner only). */
+  getRaterStats(seasonId: string, playerId: string): Promise<RaterStats | null>;
 }

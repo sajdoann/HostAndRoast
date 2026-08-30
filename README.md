@@ -107,8 +107,14 @@ firestore.rules  Access model + score-hiding (ratings are read-never)
 - `users/{uid}/memberships/{seasonId}` — private list of seasons you're in
 - `results/{seasonId}` — `{ board, publishedAt }` — written by the reveal Function
 
+## Reveal
+
+The season owner triggers the reveal. A Vercel serverless function
+(`api/reveal.ts`) reads the sealed scores with Firebase Admin credentials,
+computes the stats, and publishes them — so raw scores are never exposed to
+clients. It needs `FIREBASE_SERVICE_ACCOUNT` set in Vercel (see
+[ROADMAP.md](./ROADMAP.md) → Setup).
+
 ## Next steps
 
-See [ROADMAP.md](./ROADMAP.md). The headline item is the **`publishResults`
-Cloud Function** — until it exists, revealed seasons can't show the leaderboard
-in Firebase mode (clients can't read raw scores by design).
+See [ROADMAP.md](./ROADMAP.md).

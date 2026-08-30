@@ -1,5 +1,5 @@
 import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
-import { computeLeaderboard } from "../domain/scoring";
+import { computeLeaderboard, computeSeasonStats } from "../domain/scoring";
 import type { CodeState, DB, Store } from "./types";
 
 /**
@@ -9,7 +9,13 @@ import type { CodeState, DB, Store } from "./types";
  */
 
 const KEY = "hr.db.v1";
-const EMPTY: DB = { seasons: [], ratings: [], myClaims: {}, myMemberships: [] };
+const EMPTY: DB = {
+  seasons: [],
+  ratings: [],
+  myClaims: {},
+  myMemberships: [],
+  revealed: [],
+};
 
 function load(): DB {
   try {
@@ -21,6 +27,7 @@ function load(): DB {
       ratings: parsed.ratings ?? [],
       myClaims: parsed.myClaims ?? {},
       myMemberships: parsed.myMemberships ?? [],
+      revealed: parsed.revealed ?? [],
     };
   } catch {
     return EMPTY;
@@ -107,6 +114,7 @@ function createLocalStore(): Store {
         ),
         myClaims,
         myMemberships: state.myMemberships.filter((s) => s !== seasonId),
+        revealed: state.revealed.filter((s) => s !== seasonId),
       });
     },
 
@@ -118,8 +126,32 @@ function createLocalStore(): Store {
     },
 
     getResults(seasonId: string) {
+      if (!state.revealed.includes(seasonId)) return null;
       const season = state.seasons.find((s) => s.id === seasonId);
       return season ? computeLeaderboard(season, state.ratings) : null;
+    },
+
+    revealSeason(seasonId: string) {
+      if (!state.revealed.includes(seasonId)) {
+        commit({ ...state, revealed: [...state.revealed, seasonId] });
+      }
+      return Promise.resolve();
+    },
+
+    getFeedback(seasonId: string, hostId: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season || !state.revealed.includes(seasonId)) return Promise.resolve(null);
+      return Promise.resolve(
+        computeSeasonStats(season, state.ratings).feedbackByHost[hostId] ?? []
+      );
+    },
+
+    getRaterStats(seasonId: string, playerId: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season || !state.revealed.includes(seasonId)) return Promise.resolve(null);
+      return Promise.resolve(
+        computeSeasonStats(season, state.ratings).raterStats[playerId] ?? null
+      );
     },
   };
 }

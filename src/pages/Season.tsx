@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
-import { useMyClaim, useSeasonView } from "../store/hooks";
+import { useDB, useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import { todayISO } from "../domain/schedule";
 import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
@@ -93,6 +93,9 @@ export default function Season() {
   const navigate = useNavigate();
   const { season, ratings, loaded } = useSeasonView(id);
   const myClaim = useMyClaim(id);
+  const { revealed } = useDB();
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState<string | null>(null);
 
   if (!loaded) return <Loading />;
 
@@ -112,11 +115,29 @@ export default function Season() {
   const isOwner = !required || (!!user && season.ownerId === user.uid);
   const events = [...season.events].sort((a, b) => a.date.localeCompare(b.date));
   const myName = myClaim ? season.players.find((p) => p.id === myClaim)?.name : undefined;
+  const isRevealed = revealed.includes(season.id);
+  const rstatus = revealStatus(season, ratings);
 
   function remove() {
     if (season && confirm(t("season.deleteConfirm"))) {
       store.deleteSeason(season.id);
       navigate("/");
+    }
+  }
+
+  async function reveal() {
+    if (!season || revealing) return;
+    if (!rstatus.allRatingsIn && !confirm(t("season.revealPartialConfirm"))) return;
+    setRevealing(true);
+    setRevealError(null);
+    try {
+      await store.revealSeason(season.id);
+      navigate(`/season/${season.id}/results`);
+    } catch (e) {
+      console.error("[reveal] failed:", e);
+      setRevealError(t("season.revealError"));
+    } finally {
+      setRevealing(false);
     }
   }
 
@@ -150,23 +171,35 @@ export default function Season() {
             )
           ) : null)}
 
-        <div className={`reveal-banner ${revealStatus(season, ratings).revealed ? "is-open" : "is-locked"}`}>
+        <div className={`reveal-banner ${isRevealed ? "is-open" : "is-locked"}`}>
           <strong>
-            {revealStatus(season, ratings).revealed
-              ? t("season.reveal.unlocked")
-              : t("season.reveal.locked")}
+            {isRevealed ? t("season.reveal.unlocked") : t("season.reveal.locked")}
           </strong>
           <span className="muted">
-            {revealStatus(season, ratings).revealed
+            {isRevealed
               ? t("season.reveal.unlockedBody")
-              : t("season.reveal.lockedBody")}
+              : isOwner
+                ? rstatus.allRatingsIn
+                  ? t("season.revealReady")
+                  : t("season.revealMissing", { n: rstatus.missingRatings })
+                : t("season.reveal.lockedBody")}
           </span>
-          {revealStatus(season, ratings).revealed && (
+          {isRevealed ? (
             <Link to={`/season/${season.id}/results`} className="btn btn-primary btn-sm">
               {t("season.results")}
             </Link>
-          )}
+          ) : isOwner ? (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={reveal}
+              disabled={revealing}
+            >
+              {revealing ? t("common.loading") : t("season.revealNow")}
+            </button>
+          ) : null}
         </div>
+        {revealError && <p className="form-error">{revealError}</p>}
 
         <h2 className="subhead">{t("season.schedule")}</h2>
         <p className="muted small">{t("season.shareHint")}</p>

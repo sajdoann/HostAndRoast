@@ -17,58 +17,56 @@ priority order.
 - **Access model** — schedule/QRs readable by anyone with the link; `list` and
   edits locked down in `firestore.rules`; scores are **read-never**.
 - **Participation** — signed-in people see the seasons they own *or* joined.
-- **Deployed** — Vercel (web) + Firebase (data/auth); bilingual EN/CS; account
-  menu; brand logos.
+- **Owner-triggered reveal + rich stats** — the season owner hits "Reveal"; a
+  Vercel serverless function (`api/reveal.ts`) reads the sealed scores with
+  admin credentials and publishes the leaderboard, per-category winners,
+  each rater's own scores, and per-dinner feedback (a cook sees their dinner's
+  comments; the owner sees all). Works with partial ratings.
+- **Trustworthy rating flow** — the "thanks" screen only shows after the write
+  lands; receipts require their matching rating to exist (no faked progress).
+- **Deployed** — Vercel (web + reveal function) + Firebase (data/auth);
+  bilingual EN/CS; account menu; brand logos.
+
+## Setup for the reveal function
+
+`api/reveal.ts` needs Firebase **Admin** credentials:
+1. Firebase console → Project settings → **Service accounts** → **Generate new
+   private key** → download the JSON.
+2. Vercel → project → Settings → **Environment Variables** → add
+   `FIREBASE_SERVICE_ACCOUNT` = the full JSON (Production + Preview).
+3. Publish `firestore.rules` (adds the `results/*` read gating) and redeploy.
 
 ## ⭐ Highest-value upgrades
 
-### 1. `publishResults` Cloud Function  → `functions/`, `TODO(functions)`
-**The biggest gap.** Because clients can't read raw scores, the leaderboard must
-be computed server-side. Until this exists, a revealed season shows a
-"tallying…" state in Firebase mode and never displays results.
-1. Reuse `src/domain/reveal.ts` + `scoring.ts` inside `functions/`.
-2. Implement `publishResults` (scheduled sweep and/or `onWrite` on ratings):
-   when `revealStatus(...).revealed`, compute the board and write
-   `results/{seasonId}` as `{ board, publishedAt }`.
-3. Already wired: `Results.tsx` reads `store.getResults(seasonId)`.
-
-### 2. Trustworthy rating flow  (correctness + integrity)
-- The "thanks" screen shows even if the rating write fails — confirm only after
-  the write resolves, and surface errors.
-- **Receipt integrity:** `receipts` are currently open (`create: if true`), so
-  progress and the reveal trigger could be faked. Write receipts server-side
-  from the rating (a Function), or validate them, so "everyone rated" can't be
-  spoofed.
-
-### 3. Season management for the organizer
+### 1. Season management for the organizer
 Seasons are create-once today. Add: rename, edit the deadline, add/remove a
 player, add/remove or reorder a dinner — all owner-only, enforced by the same
 event/season rules.
 
-### 4. Richer reveal
-Comments are collected but never shown. At reveal, surface per-category winners,
-a comments digest, and tie-breakers (the Function can include these in the
-`results` doc so no raw score leaks).
-
-### 5. Tests for the domain logic
+### 2. Tests for the domain logic
 `schedule`, `reveal`, `scoring` are pure and easy to unit-test — a cheap safety
 net against regressions as the app grows (Vitest).
 
-### 6. Notifications
-Email/push when results unlock, or a nudge to guests who haven't rated yet
-(Function + a mail/push provider).
+### 3. Re-reveal & notifications
+Let the owner re-run the reveal after late ratings arrive (the function already
+overwrites `results/*`). Email/push when results unlock, or a nudge to guests
+who haven't rated yet.
+
+### 4. Reveal-time extras
+Tie-breakers, a "most generous / harshest rater" stat, best-dish highlights —
+all computable in `computeSeasonStats` so no raw score leaks.
 
 ## Housekeeping
 
-- Clean up orphaned `codes` / subcollections when a season is deleted (Function).
+- Clean up orphaned `codes` / subcollections when a season is deleted.
+- The `functions/` folder (Firebase Cloud Functions stub) is unused — reveal
+  runs on Vercel (`api/reveal.ts`). Remove it unless you adopt Cloud Functions.
 - `src/lib/stripe.ts` is an unused stub — keep only if a paid tier is ever added.
-- Local end-to-end testing with the Firebase emulator suite
-  (`firebase emulators:start`); config already in `firebase.json`.
 
 ## Deploy
 
 ```bash
-npm run build
-# Web is deployed via Vercel (vercel.json). Firebase pieces:
-firebase deploy --only firestore:rules,functions
+npm run build            # web (Vercel builds this + api/reveal.ts)
+firebase deploy --only firestore:rules
 ```
+Set `FIREBASE_SERVICE_ACCOUNT` in Vercel (see Setup above) for reveal to work.

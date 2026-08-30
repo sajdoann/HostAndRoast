@@ -10,9 +10,9 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
 import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
-import type { HostResult } from "../domain/scoring";
+import type { HostResult, RaterStats } from "../domain/scoring";
 import type { CodeState, DB, Store } from "./types";
 
 /**
@@ -50,7 +50,7 @@ export function createFirestoreStore(): Store {
   let ownerLoaded = false;
   let viewerUid: string | null = null;
 
-  let state: DB = { seasons: [], ratings: [], myClaims: {}, myMemberships: [] };
+  let state: DB = { seasons: [], ratings: [], myClaims: {}, myMemberships: [], revealed: [] };
   const listeners = new Set<() => void>();
 
   const onError = (where: string) => (err: unknown) =>
@@ -66,7 +66,13 @@ export function createFirestoreStore(): Store {
     }
     const ratings: Rating[] = [];
     for (const list of receiptsBySeason.values()) ratings.push(...list);
-    state = { seasons, ratings, myClaims: { ...myClaims }, myMemberships: [...memberships] };
+    state = {
+      seasons,
+      ratings,
+      myClaims: { ...myClaims },
+      myMemberships: [...memberships],
+      revealed: [...resultsById.keys()],
+    };
     listeners.forEach((l) => l());
   }
 
@@ -368,6 +374,32 @@ export function createFirestoreStore(): Store {
 
     getResults(seasonId: string) {
       return resultsById.get(seasonId) ?? null;
+    },
+
+    async revealSeason(seasonId: string) {
+      const user = auth?.currentUser;
+      if (!user) throw new Error("not signed in");
+      const token = await user.getIdToken();
+      const res = await fetch("/api/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ seasonId }),
+      });
+      if (!res.ok) {
+        const msg = await res.json().catch(() => ({}));
+        throw new Error(msg.error || `reveal failed (${res.status})`);
+      }
+      // The results onSnapshot (from ensureSeason) will publish the board.
+    },
+
+    async getFeedback(seasonId: string, hostId: string) {
+      const snap = await getDoc(doc(fdb, "results", seasonId, "feedback", hostId));
+      return snap.exists() ? ((snap.data() as { comments: string[] }).comments ?? []) : null;
+    },
+
+    async getRaterStats(seasonId: string, playerId: string) {
+      const snap = await getDoc(doc(fdb, "results", seasonId, "raters", playerId));
+      return snap.exists() ? (snap.data() as RaterStats) : null;
     },
   };
 }
