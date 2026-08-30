@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
-import { useSeasonView } from "../store/hooks";
+import { useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
@@ -10,6 +10,7 @@ export default function EventDay() {
   const { t } = useI18n();
   const { seasonId, eventId } = useParams();
   const { season, ratings, loaded } = useSeasonView(seasonId);
+  const myClaim = useMyClaim(seasonId);
 
   if (!loaded) return <Loading />;
 
@@ -33,6 +34,8 @@ export default function EventDay() {
   const expected = expectedRatings(season);
   const closed = isEventComplete(event, season, ratings);
   const joinUrl = `${window.location.origin}/join/${event.code}`;
+  // The cook can't rate their own dinner; everyone else gets a direct rate link.
+  const isCook = !!myClaim && myClaim === event.hostId;
 
   return (
     <section className="section">
@@ -45,6 +48,11 @@ export default function EventDay() {
           <p className="event-closed">{t("event.closed")}</p>
         ) : (
           <>
+            {!isCook && (
+              <Link to={`/join/${event.code}`} className="btn btn-primary rate-cta">
+                {t("event.rateThis")}
+              </Link>
+            )}
             <p className="muted">{t("event.scanToRate")}</p>
             <div className="qr-wrap">
               <QRCode value={joinUrl} />

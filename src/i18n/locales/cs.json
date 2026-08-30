@@ -81,7 +81,8 @@
     "claimHelp": "Vyberte své jméno jednou — pak můžete upravovat vlastní večeři a hodnotit bez opětovného zadávání.",
     "youAre": "Hrajete jako {name}.",
     "results": "Zobrazit výsledky",
-    "openHost": "Otevřít pohled hostitele",
+    "rate": "Ohodnotit",
+    "showQr": "Zobrazit QR",
     "deadline": "Termín odhalení",
     "rated": "{done}/{total} ohodnoceno",
     "status": {
@@ -110,10 +111,12 @@
   "event": {
     "title": "Den hostitele",
     "hostedBy": "Hostí {host}",
-    "scanToRate": "Hosté: naskenujte a ohodnoťte dnešní večeři",
+    "scanToRate": "Ukažte hostům, ať naskenují a ohodnotí — nebo sdílejte odkaz.",
     "orEnterCode": "nebo zadejte kód na",
     "rated": "{done} z {total} hostů ohodnotilo",
     "closed": "Všichni ohodnotili — hlasování je uzavřeno. 🎉",
+    "rateThis": "Ohodnotit večeři",
+    "showQr": "Zobrazit QR akce",
     "backToSeason": "Zpět na sezónu"
   },
   "join": {
