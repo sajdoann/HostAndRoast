@@ -38,9 +38,6 @@ export default function Home() {
           <h1 className="hero-title">{t("home.title")}</h1>
           <p className="hero-subtitle">{t("home.subtitle")}</p>
           <div className="hero-actions">
-            <Link to="/new" className="btn btn-primary">
-              {t("home.ctaPrimary")}
-            </Link>
             <form className="join-inline" onSubmit={join}>
               <input
                 aria-label={t("home.codePlaceholder")}
@@ -53,6 +50,9 @@ export default function Home() {
                 {t("home.codeGo")}
               </button>
             </form>
+            <Link to="/new" className="btn btn-primary">
+              {t("home.ctaPrimary")}
+            </Link>
           </div>
         </div>
       </section>
