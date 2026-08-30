@@ -36,7 +36,6 @@ export default function Home() {
           <Logo className="hero-logo" />
           <p className="eyebrow">{t("home.eyebrow")}</p>
           <h1 className="hero-title">{t("home.title")}</h1>
-          <p className="hero-subtitle">{t("home.subtitle")}</p>
           <div className="hero-actions">
             <form className="join-inline" onSubmit={join}>
               <input
@@ -50,6 +49,9 @@ export default function Home() {
                 {t("home.codeGo")}
               </button>
             </form>
+            <div className="or-divider">
+              <span>{t("home.or")}</span>
+            </div>
             <Link to="/new" className="btn btn-primary">
               {t("home.ctaPrimary")}
             </Link>
