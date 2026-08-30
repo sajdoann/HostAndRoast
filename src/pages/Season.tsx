@@ -23,11 +23,13 @@ function DinnerRow({
   event,
   ratingsCount,
   canEdit,
+  isCook,
 }: {
   season: SeasonModel;
   event: DinnerEvent;
   ratingsCount: number;
   canEdit: boolean;
+  isCook: boolean;
 }) {
   const { t } = useI18n();
   const [meal, setMeal] = useState(event.mealDescription ?? "");
@@ -78,9 +80,17 @@ function DinnerRow({
       </div>
 
       <div className="schedule-actions">
-        <Link to={`/event/${season.id}/${event.id}`} className="btn btn-ghost btn-sm">
-          {t("season.openHost")}
-        </Link>
+        {isCook ? (
+          // The cook can't rate their own dinner — they get the QR to present.
+          <Link to={`/event/${season.id}/${event.id}`} className="btn btn-ghost btn-sm">
+            {t("season.showQr")}
+          </Link>
+        ) : (
+          // Everyone else goes straight to rating (QR is one tap away from there).
+          <Link to={`/join/${event.code}`} className="btn btn-primary btn-sm">
+            {t("season.rate")}
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -207,7 +217,8 @@ export default function Season() {
         <div className="schedule">
           {events.map((event) => {
             const count = ratingsForEvent(event, ratings).length;
-            const canEdit = isOwner || (!!myClaim && myClaim === event.hostId);
+            const isCook = !!myClaim && myClaim === event.hostId;
+            const canEdit = isOwner || isCook;
             return (
               <DinnerRow
                 key={event.id}
@@ -215,6 +226,7 @@ export default function Season() {
                 event={event}
                 ratingsCount={count}
                 canEdit={canEdit}
+                isCook={isCook}
               />
             );
           })}

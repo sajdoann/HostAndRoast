@@ -128,6 +128,12 @@ export default function Join() {
               );
             })}
         </div>
+        <Link
+          to={`/event/${season.id}/${event.id}`}
+          className="btn btn-ghost btn-sm show-qr-link"
+        >
+          {t("event.showQr")}
+        </Link>
       </>
     );
   }
@@ -189,6 +195,12 @@ export default function Join() {
         </button>
         {submitError && <p className="form-error">{submitError}</p>}
       </div>
+      <Link
+        to={`/event/${season.id}/${event.id}`}
+        className="btn btn-ghost btn-sm show-qr-link"
+      >
+        {t("event.showQr")}
+      </Link>
     </>
   );
 }
