@@ -111,8 +111,10 @@ function createLocalStore(): Store {
     },
 
     addRating(rating: Rating) {
-      if (state.ratings.some((r) => r.id === rating.id)) return;
-      commit({ ...state, ratings: [...state.ratings, rating] });
+      if (!state.ratings.some((r) => r.id === rating.id)) {
+        commit({ ...state, ratings: [...state.ratings, rating] });
+      }
+      return Promise.resolve();
     },
 
     getResults(seasonId: string) {

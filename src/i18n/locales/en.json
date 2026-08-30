@@ -128,6 +128,7 @@
     "commentLabel": "Comment (optional)",
     "commentPlaceholder": "A word for the host…",
     "submit": "Submit rating",
+    "submitError": "Couldn't save your rating — please try again.",
     "thanksTitle": "Thanks — your scores are sealed 🔒",
     "thanksBody": "No peeking! Results reveal once the whole season is done."
   },

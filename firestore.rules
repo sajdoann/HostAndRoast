@@ -63,13 +63,17 @@ service cloud.firestore {
                       && validScore(scores().entertainment);
         allow update, delete: if false;
       }
-    }
 
-    // Receipts: who rated, no scores. Public so progress + reveal can be shown.
-    match /{path=**}/receipts/{receiptId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if false;
+      // Receipts: who rated, no scores. Public so progress + reveal can be
+      // shown. A receipt may only be created once its matching rating exists
+      // (same id) — so progress can't be faked with a bare receipt.
+      match /receipts/{receiptId} {
+        allow read: if true;
+        allow create: if exists(
+          /databases/$(database)/documents/seasons/$(sid)/ratings/$(receiptId)
+        );
+        allow update, delete: if false;
+      }
     }
 
     // Join-code lookup: read one by code; not listable.

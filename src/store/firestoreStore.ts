@@ -339,28 +339,30 @@ export function createFirestoreStore(): Store {
       rebuild();
     },
 
-    addRating(rating: Rating) {
+    async addRating(rating: Rating) {
       const season = state.seasons.find((s) =>
         s.events.some((e) => e.id === rating.eventId)
       );
-      if (!season) return;
-      const batch = writeBatch(fdb);
-      batch.set(doc(fdb, "seasons", season.id, "ratings", rating.id), {
+      if (!season) throw new Error("season not loaded");
+
+      // 1. The rating (read-never). Await it — this is what "thanks" confirms.
+      await setDoc(doc(fdb, "seasons", season.id, "ratings", rating.id), {
         eventId: rating.eventId,
         raterId: rating.raterId,
         scores: rating.scores,
         comment: rating.comment ?? null,
         createdAt: rating.createdAt,
       });
-      batch.set(doc(fdb, "seasons", season.id, "receipts", rating.id), {
+
+      // 2. The receipt, written AFTER the rating so the rules can verify the
+      //    rating exists (no faking progress with a bare receipt). Best-effort.
+      void setDoc(doc(fdb, "seasons", season.id, "receipts", rating.id), {
         eventId: rating.eventId,
         raterId: rating.raterId,
         createdAt: rating.createdAt,
-      });
-      batch.commit().catch(onError("addRating"));
-      // Once a signed-in person rates as a nickname, that nickname is them for
-      // the season (and the season joins their list). Best-effort, separate
-      // from the rating write so it can't break it.
+      }).catch(onError("receipt"));
+
+      // 3. A signed-in rater binds their identity and joins the season list.
       if (viewerUid) bindIdentity(season.id, viewerUid, rating.raterId);
     },
 

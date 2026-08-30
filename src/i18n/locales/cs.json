@@ -128,6 +128,7 @@
     "commentLabel": "Komentář (nepovinné)",
     "commentPlaceholder": "Vzkaz pro hostitele…",
     "submit": "Odeslat hodnocení",
+    "submitError": "Hodnocení se nepodařilo uložit — zkuste to prosím znovu.",
     "thanksTitle": "Děkujeme — vaše skóre je zapečetěné 🔒",
     "thanksBody": "Žádné nakukování! Výsledky se odhalí, až skončí celá sezóna."
   },

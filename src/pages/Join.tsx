@@ -35,6 +35,8 @@ export default function Join() {
   });
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (codeState === "loading") return <Loading />;
 
@@ -130,18 +132,28 @@ export default function Join() {
     );
   }
 
-  function submit() {
-    if (!raterId) return;
-    store.addRating({
-      id: `${event.id}_${raterId}`,
-      eventId: event.id,
-      raterId,
-      scores,
-      comment: comment.trim() || undefined,
-      createdAt: Date.now(),
-    });
-    markVoted(event.id, season.players.find((p) => p.id === raterId)?.name ?? "");
-    setSubmitted(true);
+  async function submit() {
+    if (!raterId || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await store.addRating({
+        id: `${event.id}_${raterId}`,
+        eventId: event.id,
+        raterId,
+        scores,
+        comment: comment.trim() || undefined,
+        createdAt: Date.now(),
+      });
+      // Only lock this device and show thanks once the rating actually landed.
+      markVoted(event.id, season.players.find((p) => p.id === raterId)?.name ?? "");
+      setSubmitted(true);
+    } catch (e) {
+      console.error("[join] rating failed:", e);
+      setSubmitError(t("join.submitError"));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const raterName = season.players.find((p) => p.id === raterId)?.name;
@@ -172,9 +184,10 @@ export default function Join() {
           />
         </label>
 
-        <button type="button" className="btn btn-primary" onClick={submit}>
-          {t("join.submit")}
+        <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
+          {submitting ? t("common.loading") : t("join.submit")}
         </button>
+        {submitError && <p className="form-error">{submitError}</p>}
       </div>
     </>
   );

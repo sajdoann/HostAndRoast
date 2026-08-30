@@ -50,6 +50,11 @@ export interface Store {
   claimPlayer(seasonId: string, uid: string, playerId: string): void;
   deleteSeason(seasonId: string): void;
 
-  addRating(rating: Rating): void;
+  /**
+   * Record a rating. Resolves once the rating write lands (so the UI confirms
+   * only on success), rejects if it fails. The receipt + identity writes happen
+   * after, best-effort.
+   */
+  addRating(rating: Rating): Promise<void>;
   getResults(seasonId: string): HostResult[] | null;
 }
