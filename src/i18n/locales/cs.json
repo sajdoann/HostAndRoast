@@ -25,7 +25,8 @@
     "copy": "Kopírovat odkaz",
     "copied": "Zkopírováno!",
     "open": "Otevřít",
-    "loading": "Načítání…"
+    "loading": "Načítání…",
+    "close": "Zavřít"
   },
   "categories": {
     "food": "Jídlo",
@@ -77,6 +78,8 @@
     "shareHint": "Sdílejte odkaz na tuto stránku se všemi hráči. V den večeře otevřete její stránku a ukažte QR kód.",
     "mealPlaceholder": "Co bude na menu?",
     "noMeal": "Zatím bez menu",
+    "viewMenu": "📜 Zobrazit menu",
+    "menuModalTitle": "Menu – {host}",
     "claimTitle": "Které jméno jste vy?",
     "claimHelp": "Vyberte své jméno jednou — pak můžete upravovat vlastní večeři a hodnotit bez opětovného zadávání.",
     "youAre": "Hrajete jako {name}.",
@@ -111,6 +114,8 @@
   "event": {
     "title": "Den hostitele",
     "hostedBy": "Hostí {host}",
+    "menuHeading": "MENU",
+    "noMealYet": "Menu zatím nebylo přidáno 👨‍🍳",
     "scanToRate": "Ukažte hostům, ať naskenují a ohodnotí — nebo sdílejte odkaz.",
     "orEnterCode": "nebo zadejte kód na",
     "rated": "{done} z {total} hostů ohodnotilo",

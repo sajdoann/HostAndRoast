@@ -25,7 +25,8 @@
     "copy": "Copy link",
     "copied": "Copied!",
     "open": "Open",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "close": "Close"
   },
   "categories": {
     "food": "Food",
@@ -77,6 +78,8 @@
     "shareHint": "Share this page's link with everyone playing. Open a dinner on its day to show the QR code.",
     "mealPlaceholder": "What's on the menu?",
     "noMeal": "No menu yet",
+    "viewMenu": "📜 View Menu",
+    "menuModalTitle": "Menu – {host}",
     "claimTitle": "Which name are you?",
     "claimHelp": "Pick your name once — then you can edit your own dinner and rate without re-entering it.",
     "youAre": "You're playing as {name}.",
@@ -111,6 +114,8 @@
   "event": {
     "title": "Host day",
     "hostedBy": "Hosted by {host}",
+    "menuHeading": "MENU",
+    "noMealYet": "Menu has not been added yet 👨‍🍳",
     "scanToRate": "Show this to guests so they can scan and rate — or share the link.",
     "orEnterCode": "or enter code at",
     "rated": "{done} of {total} guests have rated",

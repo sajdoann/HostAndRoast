@@ -42,7 +42,6 @@ export default function EventDay() {
       <div className="container center-narrow event-day">
         <p className="eyebrow">{t("event.title")}</p>
         <h1 className="section-title">{t("event.hostedBy", { host: host?.name ?? "—" })}</h1>
-        {event.mealDescription && <p className="event-meal">“{event.mealDescription}”</p>}
 
         {closed ? (
           <p className="event-closed">{t("event.closed")}</p>
@@ -65,6 +64,15 @@ export default function EventDay() {
             <CopyLink value={joinUrl} />
           </>
         )}
+
+        <div className="menu-card">
+          <p className="menu-card-heading">✦ {t("event.menuHeading")} ✦</p>
+          {event.mealDescription ? (
+            <p className="menu-card-body">{event.mealDescription}</p>
+          ) : (
+            <p className="menu-card-body menu-card-placeholder">{t("event.noMealYet")}</p>
+          )}
+        </div>
 
         <p className="muted progress">{t("event.rated", { done, total: expected })}</p>
 

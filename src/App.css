@@ -377,8 +377,14 @@ fieldset.field {
 .meal-text {
   min-width: 0;
 }
+.meal-input {
+  resize: vertical;
+  font-family: inherit;
+  min-height: 44px;
+}
 .meal-text {
   font-style: italic;
+  white-space: pre-wrap;
 }
 
 /* Claim identity */
@@ -395,11 +401,6 @@ fieldset.field {
 .claim-names .name-btn {
   width: auto;
   padding: 8px 14px;
-}
-.event-meal {
-  font-style: italic;
-  font-size: 1.1rem;
-  margin: 4px 0 12px;
 }
 .schedule-meta code {
   background: var(--cream);
@@ -473,6 +474,79 @@ fieldset.field {
 }
 .progress {
   margin-top: 20px;
+}
+
+/* Dinner menu card (event detail, below the QR code) */
+.menu-card {
+  background: #fdfbf7;
+  border: 1.5px solid #d4af37;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 18px 0;
+  text-align: left;
+}
+.menu-card-heading {
+  text-align: center;
+  color: #d4af37;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 10px;
+}
+.menu-card-body {
+  white-space: pre-wrap;
+  margin: 0;
+  color: var(--text);
+}
+.menu-card-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* Dinner menu modal (season overview) */
+.menu-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 30;
+}
+.menu-modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--cream-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 24px 24px;
+}
+.menu-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--white);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.menu-modal-title {
+  margin: 0 0 14px;
+  padding-right: 30px;
+  font-family: var(--font-display);
+}
+.menu-modal-body {
+  white-space: pre-wrap;
+  margin: 0;
 }
 
 /* Name picker */

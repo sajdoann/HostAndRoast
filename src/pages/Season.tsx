@@ -33,6 +33,7 @@ function DinnerRow({
 }) {
   const { t } = useI18n();
   const [meal, setMeal] = useState(event.mealDescription ?? "");
+  const [menuOpen, setMenuOpen] = useState(false);
   const hostName = season.players.find((p) => p.id === event.hostId)?.name ?? "—";
   const key = statusKey(event, season, ratingsCount);
 
@@ -61,8 +62,9 @@ function DinnerRow({
       )}
 
       {canEdit ? (
-        <input
+        <textarea
           className="meal-input"
+          rows={2}
           value={meal}
           placeholder={t("season.mealPlaceholder")}
           onChange={(e) => setMeal(e.target.value)}
@@ -80,6 +82,13 @@ function DinnerRow({
       </div>
 
       <div className="schedule-actions">
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => setMenuOpen(true)}
+        >
+          {t("season.viewMenu")}
+        </button>
         {isCook ? (
           // The cook can't rate their own dinner — they get the QR to present.
           <Link to={`/event/${season.id}/${event.id}`} className="btn btn-ghost btn-sm">
@@ -92,6 +101,27 @@ function DinnerRow({
           </Link>
         )}
       </div>
+
+      {menuOpen && (
+        <div className="menu-modal-backdrop" onClick={() => setMenuOpen(false)}>
+          <div className="menu-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="menu-modal-close"
+              aria-label={t("common.close")}
+              onClick={() => setMenuOpen(false)}
+            >
+              ✕
+            </button>
+            <h3 className="menu-modal-title">
+              {t("season.menuModalTitle", { host: hostName })}
+            </h3>
+            <p className="menu-modal-body">
+              {event.mealDescription || t("event.noMealYet")}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
