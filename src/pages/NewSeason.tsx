@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
 import { genCode, genId } from "../domain/ids";
-import { buildSchedule, todayISO } from "../domain/schedule";
+import { buildSchedule, todayISO, type RecurrenceUnit } from "../domain/schedule";
 import type { Player, Season } from "../domain/types";
 
 const LOCAL_OWNER = "local";
@@ -17,7 +17,8 @@ export default function NewSeason() {
   const [name, setName] = useState("");
   const [names, setNames] = useState<string[]>(["", ""]);
   const [startDate, setStartDate] = useState(todayISO());
-  const [interval, setInterval] = useState(7);
+  const [repeatValue, setRepeatValue] = useState(1);
+  const [repeatUnit, setRepeatUnit] = useState<RecurrenceUnit>("week");
   const [deadline, setDeadline] = useState("");
   const [error, setError] = useState("");
 
@@ -46,7 +47,10 @@ export default function NewSeason() {
       name: name.trim(),
       ownerId: user?.uid ?? LOCAL_OWNER,
       players,
-      events: buildSchedule(seasonId, players, startDate, interval),
+      events: buildSchedule(seasonId, players, startDate, {
+        value: repeatValue,
+        unit: repeatUnit,
+      }),
       code: genCode(),
       revealAt: deadline ? new Date(`${deadline}T23:59:59`).getTime() : undefined,
       createdAt: Date.now(),
@@ -123,12 +127,22 @@ export default function NewSeason() {
             </label>
             <label className="field">
               <span>{t("new.interval")}</span>
-              <input
-                type="number"
-                min={1}
-                value={interval}
-                onChange={(e) => setInterval(Math.max(1, Number(e.target.value)))}
-              />
+              <div className="repeat-row">
+                <input
+                  type="number"
+                  min={1}
+                  value={repeatValue}
+                  onChange={(e) => setRepeatValue(Math.max(1, Number(e.target.value)))}
+                />
+                <select
+                  value={repeatUnit}
+                  onChange={(e) => setRepeatUnit(e.target.value as RecurrenceUnit)}
+                >
+                  <option value="day">{t("new.intervalUnit.day")}</option>
+                  <option value="week">{t("new.intervalUnit.week")}</option>
+                  <option value="month">{t("new.intervalUnit.month")}</option>
+                </select>
+              </div>
             </label>
           </div>
 

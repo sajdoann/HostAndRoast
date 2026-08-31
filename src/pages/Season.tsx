@@ -8,12 +8,13 @@ import Loading from "../components/Loading";
 import MenuModal from "../components/MenuModal";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
-import { todayISO } from "../domain/schedule";
+import { compareEventDates, todayISO } from "../domain/schedule";
 import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
 import type { DinnerEvent, Season as SeasonModel } from "../domain/types";
 
 function statusKey(event: DinnerEvent, season: SeasonModel, ratingsIn: number): string {
   if (ratingsIn >= expectedRatings(season)) return "complete";
+  if (!event.date) return "unscheduled";
   const today = todayISO();
   if (event.date === today) return "today";
   if (event.date < today) return "past";
@@ -57,11 +58,15 @@ function DinnerRow({
         <input
           className="schedule-date"
           type="date"
-          value={event.date}
-          onChange={(e) => store.updateEvent(season.id, { ...event, date: e.target.value })}
+          value={event.date ?? ""}
+          onChange={(e) =>
+            store.updateEvent(season.id, { ...event, date: e.target.value || undefined })
+          }
         />
       ) : (
-        <span className="schedule-date muted">{event.date}</span>
+        <span className="schedule-date muted">
+          {event.date || t("season.status.unscheduled")}
+        </span>
       )}
 
       {canEdit ? (
@@ -138,7 +143,7 @@ export default function Season() {
   }
 
   const isOwner = !required || (!!user && season.ownerId === user.uid);
-  const events = [...season.events].sort((a, b) => a.date.localeCompare(b.date));
+  const events = [...season.events].sort(compareEventDates);
   const myName = myClaim ? season.players.find((p) => p.id === myClaim)?.name : undefined;
   const isRevealed = revealed.includes(season.id);
   const rstatus = revealStatus(season, ratings);

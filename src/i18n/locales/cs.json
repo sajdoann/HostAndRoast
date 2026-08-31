@@ -71,7 +71,12 @@
     "addPlayer": "Přidat hráče",
     "remove": "Odebrat",
     "startDate": "Datum první večeře",
-    "interval": "Dní mezi večeřemi",
+    "interval": "Opakovat každý",
+    "intervalUnit": {
+      "day": "Den",
+      "week": "Týden",
+      "month": "Měsíc"
+    },
     "deadline": "Termín odhalení (nepovinné)",
     "deadlineHelp": "Výsledky se odhalí automaticky po tomto datu, i když některá hodnocení chybí.",
     "create": "Vytvořit sezónu",
@@ -100,7 +105,8 @@
       "upcoming": "Nadcházející",
       "today": "Dnes",
       "complete": "Vše ohodnoceno",
-      "past": "Proběhlo"
+      "past": "Proběhlo",
+      "unscheduled": "Bez termínu"
     },
     "reveal": {
       "locked": "Skóre je zapečetěné",

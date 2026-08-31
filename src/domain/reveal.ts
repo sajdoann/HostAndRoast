@@ -22,9 +22,10 @@ export function isEventComplete(
   return ratingsForEvent(event, ratings).length >= expectedRatings(season);
 }
 
-/** A host date has passed when its date is strictly before today. */
+/** A host date has passed when it's set and strictly before today (an
+ *  unscheduled dinner has no date to pass, so it never counts as "done"). */
 export function hasDatePassed(event: DinnerEvent, today = todayISO()): boolean {
-  return event.date < today;
+  return !!event.date && event.date < today;
 }
 
 export interface RevealStatus {

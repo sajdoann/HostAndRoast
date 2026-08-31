@@ -13,6 +13,7 @@ import {
 import { auth, db } from "../lib/firebase";
 import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
 import type { HostResult, RaterStats } from "../domain/scoring";
+import { compareEventDates } from "../domain/schedule";
 import type { CodeState, DB, Store } from "./types";
 
 /**
@@ -59,9 +60,7 @@ export function createFirestoreStore(): Store {
   function rebuild() {
     const seasons: Season[] = [];
     for (const [id, docData] of seasonDocs) {
-      const events = [...(eventsBySeason.get(id) ?? [])].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      );
+      const events = [...(eventsBySeason.get(id) ?? [])].sort(compareEventDates);
       seasons.push({ ...docData, id, events });
     }
     const ratings: Rating[] = [];
@@ -97,7 +96,8 @@ export function createFirestoreStore(): Store {
   function mapEvents(seasonId: string, snap: import("firebase/firestore").QuerySnapshot) {
     return snap.docs.map((d) => {
       const data = d.data() as Omit<DinnerEvent, "id" | "seasonId">;
-      return { id: d.id, seasonId, ...data } satisfies DinnerEvent;
+      // Firestore stores "no date" as null; normalize back to undefined.
+      return { id: d.id, seasonId, ...data, date: data.date ?? undefined } satisfies DinnerEvent;
     });
   }
 
@@ -169,7 +169,7 @@ export function createFirestoreStore(): Store {
   function eventDoc(event: DinnerEvent) {
     const data: Record<string, unknown> = {
       hostId: event.hostId,
-      date: event.date,
+      date: event.date ?? null,
       code: event.code,
     };
     if (event.mealDescription != null) data.mealDescription = event.mealDescription;
@@ -323,7 +323,7 @@ export function createFirestoreStore(): Store {
 
     updateEvent(seasonId: string, event: DinnerEvent) {
       void updateDoc(doc(fdb, "seasons", seasonId, "events", event.id), {
-        date: event.date,
+        date: event.date ?? null,
         mealDescription: event.mealDescription ?? null,
       }).catch(onError("updateEvent"));
     },

@@ -19,8 +19,8 @@ export interface DinnerEvent {
   seasonId: string;
   /** Player id of the cook hosting this dinner. */
   hostId: string;
-  /** Host date, ISO `YYYY-MM-DD`. */
-  date: string;
+  /** Host date, ISO `YYYY-MM-DD`. Unset means not yet scheduled. */
+  date?: string;
   /** Short public join code, encoded into the QR shown on the day. */
   code: string;
   /** The cook's menu for the night (set by the cook or organizer). */

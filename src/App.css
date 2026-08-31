@@ -295,6 +295,18 @@
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.repeat-row {
+  display: flex;
+  gap: 8px;
+}
+.repeat-row input[type="number"] {
+  width: 72px;
+  flex: none;
+}
+.repeat-row select {
+  flex: 1;
+  min-width: 0;
+}
 input,
 textarea,
 select {

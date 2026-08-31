@@ -71,7 +71,12 @@
     "addPlayer": "Add player",
     "remove": "Remove",
     "startDate": "First dinner date",
-    "interval": "Days between dinners",
+    "interval": "Repeat every",
+    "intervalUnit": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
     "deadline": "Reveal deadline (optional)",
     "deadlineHelp": "Results reveal automatically after this date even if some ratings are missing.",
     "create": "Create season",
@@ -100,7 +105,8 @@
       "upcoming": "Upcoming",
       "today": "Today",
       "complete": "All rated",
-      "past": "Past"
+      "past": "Past",
+      "unscheduled": "Unscheduled"
     },
     "reveal": {
       "locked": "Scores are sealed",
