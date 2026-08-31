@@ -57,6 +57,12 @@ export interface Season {
   ownerId: string;
   players: Player[];
   events: DinnerEvent[];
+  /**
+   * Short public join code for the season overview (encoded into its QR),
+   * separate from each dinner's own code. Optional so seasons created before
+   * this existed still load fine — they just show a plain link, no code.
+   */
+  code?: string;
   /** Deadline after which results reveal even if some ratings are missing. */
   revealAt?: number;
   createdAt: number;

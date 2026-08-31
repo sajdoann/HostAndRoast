@@ -69,3 +69,21 @@ export function useJoinTarget(code: string | undefined): {
   const target = code ? store.findByCode(code) : undefined;
   return { target, codeState };
 }
+
+/** Resolve a season-level join code (the season overview's own QR code). */
+export function useSeasonByCode(code: string | undefined): {
+  season: Season | undefined;
+  codeState: CodeState;
+} {
+  useEffect(() => {
+    if (code) store.resolveCode(code);
+  }, [code]);
+
+  useDB(); // re-render on data changes
+  const codeState = useSyncExternalStore(
+    store.subscribe,
+    () => (code ? store.getCodeState(code) : "missing")
+  );
+  const season = code ? store.findSeasonByCode(code) : undefined;
+  return { season, codeState };
+}

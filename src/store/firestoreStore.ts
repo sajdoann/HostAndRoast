@@ -286,6 +286,11 @@ export function createFirestoreStore(): Store {
       return undefined;
     },
 
+    findSeasonByCode(code: string): Season | undefined {
+      const wanted = code.trim().toUpperCase();
+      return state.seasons.find((s) => s.code === wanted);
+    },
+
     createSeason(season: Season) {
       const batch = writeBatch(fdb);
       const { events, ...meta } = season;
@@ -296,7 +301,13 @@ export function createFirestoreStore(): Store {
         createdAt: meta.createdAt,
       };
       if (meta.revealAt != null) seasonData.revealAt = meta.revealAt;
+      if (meta.code != null) seasonData.code = meta.code;
       batch.set(doc(fdb, "seasons", season.id), seasonData);
+      if (meta.code) {
+        // Season-level code: same lookup as an event's, minus eventId — lets
+        // anyone with the code land on the season overview (not a dinner).
+        batch.set(doc(fdb, "codes", meta.code), { seasonId: season.id });
+      }
       for (const event of events) {
         // ownerId is denormalized onto the event so the create rule needs no
         // cross-doc read (the season isn't committed yet within this batch).

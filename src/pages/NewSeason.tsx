@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
-import { genId } from "../domain/ids";
+import { genCode, genId } from "../domain/ids";
 import { buildSchedule, todayISO } from "../domain/schedule";
 import type { Player, Season } from "../domain/types";
 
@@ -47,6 +47,7 @@ export default function NewSeason() {
       ownerId: user?.uid ?? LOCAL_OWNER,
       players,
       events: buildSchedule(seasonId, players, startDate, interval),
+      code: genCode(),
       revealAt: deadline ? new Date(`${deadline}T23:59:59`).getTime() : undefined,
       createdAt: Date.now(),
     };

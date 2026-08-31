@@ -6,6 +6,8 @@ import { store } from "../store";
 import { useDB, useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import MenuModal from "../components/MenuModal";
+import QRCode from "../components/QRCode";
+import CopyLink from "../components/CopyLink";
 import { todayISO } from "../domain/schedule";
 import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
 import type { DinnerEvent, Season as SeasonModel } from "../domain/types";
@@ -140,6 +142,9 @@ export default function Season() {
   const myName = myClaim ? season.players.find((p) => p.id === myClaim)?.name : undefined;
   const isRevealed = revealed.includes(season.id);
   const rstatus = revealStatus(season, ratings);
+  const seasonJoinUrl = season.code
+    ? `${window.location.origin}/s/${season.code}`
+    : `${window.location.origin}/season/${season.id}`;
 
   function remove() {
     if (season && confirm(t("season.deleteConfirm"))) {
@@ -226,6 +231,21 @@ export default function Season() {
 
         <h2 className="subhead">{t("season.schedule")}</h2>
         <p className="muted small">{t("season.shareHint")}</p>
+
+        <div className="season-share">
+          <p className="muted small">{t("season.scanToJoin")}</p>
+          <div className="qr-wrap">
+            <QRCode value={seasonJoinUrl} size={180} />
+          </div>
+          {season.code && (
+            <p className="join-code">
+              {t("season.orEnterCode")} <strong>{window.location.host}</strong>
+              <br />
+              <span className="code-big">{season.code}</span>
+            </p>
+          )}
+          <CopyLink value={seasonJoinUrl} />
+        </div>
 
         <div className="schedule">
           {events.map((event) => {

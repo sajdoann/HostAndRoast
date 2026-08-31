@@ -64,7 +64,7 @@ function createLocalStore(): Store {
     isLoaded: () => true,
     isSeasonLoaded: () => true,
     getCodeState(code: string): CodeState {
-      return this.findByCode(code) ? "ready" : "missing";
+      return this.findByCode(code) || this.findSeasonByCode(code) ? "ready" : "missing";
     },
 
     subscribe(listener) {
@@ -89,6 +89,11 @@ function createLocalStore(): Store {
         if (event) return { season, event };
       }
       return undefined;
+    },
+
+    findSeasonByCode(code: string): Season | undefined {
+      const wanted = code.trim().toUpperCase();
+      return state.seasons.find((s) => s.code === wanted);
     },
 
     createSeason(season: Season) {

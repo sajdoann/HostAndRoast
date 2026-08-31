@@ -461,13 +461,18 @@ fieldset.field {
 }
 
 /* Event day */
-.event-day .qr-wrap {
+.event-day .qr-wrap,
+.season-share .qr-wrap {
   display: inline-block;
   padding: 16px;
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   margin: 12px 0;
+}
+.season-share {
+  text-align: center;
+  margin: 4px 0 20px;
 }
 .qr-fallback {
   background: var(--cream);

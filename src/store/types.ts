@@ -44,6 +44,8 @@ export interface Store {
   resolveCode(code: string): void;
   /** Read a resolved code from current state. */
   findByCode(code: string): JoinTarget | undefined;
+  /** Read a resolved season-level code (season.code) from current state. */
+  findSeasonByCode(code: string): Season | undefined;
 
   createSeason(season: Season): void;
   /** Edit one dinner (date / meal). Owner or the cook who claimed that player. */

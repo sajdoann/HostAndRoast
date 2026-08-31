@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import NewSeason from "./pages/NewSeason";
 import Season from "./pages/Season";
+import SeasonJoin from "./pages/SeasonJoin";
 import EventDay from "./pages/EventDay";
 import Join from "./pages/Join";
 import Results from "./pages/Results";
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="season/:id/results" element={<Results />} />
         <Route path="event/:seasonId/:eventId" element={<EventDay />} />
         <Route path="join/:code" element={<Join />} />
+        <Route path="s/:code" element={<SeasonJoin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
