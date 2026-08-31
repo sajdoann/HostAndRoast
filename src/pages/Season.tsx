@@ -5,6 +5,7 @@ import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
 import { useDB, useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
+import MenuModal from "../components/MenuModal";
 import { todayISO } from "../domain/schedule";
 import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
 import type { DinnerEvent, Season as SeasonModel } from "../domain/types";
@@ -31,6 +32,7 @@ function DinnerRow({
 }) {
   const { t } = useI18n();
   const [meal, setMeal] = useState(event.mealDescription ?? "");
+  const [menuOpen, setMenuOpen] = useState(false);
   const hostName = season.players.find((p) => p.id === event.hostId)?.name ?? "—";
   const key = statusKey(event, season, ratingsCount);
 
@@ -59,8 +61,9 @@ function DinnerRow({
       )}
 
       {canEdit ? (
-        <input
+        <textarea
           className="meal-input"
+          rows={3}
           value={meal}
           placeholder={t("season.mealPlaceholder")}
           onChange={(e) => setMeal(e.target.value)}
@@ -68,7 +71,7 @@ function DinnerRow({
         />
       ) : (
         <span className="meal-text muted">
-          {event.mealDescription || t("season.noMeal")}
+          {(event.mealDescription || t("season.noMeal")).split("\n")[0]}
         </span>
       )}
 
@@ -78,10 +81,20 @@ function DinnerRow({
       </div>
 
       <div className="schedule-actions">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMenuOpen(true)}>
+          {t("menu.view")}
+        </button>
         <Link to={`/event/${season.id}/${event.id}`} className="btn btn-ghost btn-sm">
           {t("season.openHost")}
         </Link>
       </div>
+      {menuOpen && (
+        <MenuModal
+          hostName={hostName}
+          text={event.mealDescription}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
     </div>
   );
 }

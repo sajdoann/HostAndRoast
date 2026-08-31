@@ -25,7 +25,14 @@
     "copy": "Copy link",
     "copied": "Copied!",
     "open": "Open",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "close": "Close"
+  },
+  "menu": {
+    "heading": "\u2726 MENU \u2726",
+    "empty": "Menu has not been added yet \ud83d\udc68\u200d\ud83c\udf73",
+    "modalTitle": "Menu \u2013 {host}",
+    "view": "\ud83d\udcdc View menu"
   },
   "categories": {
     "food": "Food",

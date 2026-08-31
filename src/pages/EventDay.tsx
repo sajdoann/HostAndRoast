@@ -4,6 +4,7 @@ import { useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
+import MenuCard from "../components/MenuCard";
 import { expectedRatings, isEventComplete, ratingsForEvent } from "../domain/reveal";
 
 export default function EventDay() {
@@ -39,7 +40,6 @@ export default function EventDay() {
       <div className="container center-narrow event-day">
         <p className="eyebrow">{t("event.title")}</p>
         <h1 className="section-title">{t("event.hostedBy", { host: host?.name ?? "—" })}</h1>
-        {event.mealDescription && <p className="event-meal">“{event.mealDescription}”</p>}
 
         {closed ? (
           <p className="event-closed">{t("event.closed")}</p>
@@ -57,6 +57,8 @@ export default function EventDay() {
             <CopyLink value={joinUrl} />
           </>
         )}
+
+        <MenuCard text={event.mealDescription} />
 
         <p className="muted progress">{t("event.rated", { done, total: expected })}</p>
 

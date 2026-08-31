@@ -25,7 +25,14 @@
     "copy": "Kopírovat odkaz",
     "copied": "Zkopírováno!",
     "open": "Otevřít",
-    "loading": "Načítání…"
+    "loading": "Načítání…",
+    "close": "Zavřít"
+  },
+  "menu": {
+    "heading": "\u2726 MENU \u2726",
+    "empty": "Menu zatím nebylo přidáno \ud83d\udc68\u200d\ud83c\udf73",
+    "modalTitle": "Menu \u2013 {host}",
+    "view": "\ud83d\udcdc Zobrazit menu"
   },
   "categories": {
     "food": "Jídlo",

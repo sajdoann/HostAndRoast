@@ -360,10 +360,20 @@ fieldset.field {
 }
 .schedule-row {
   display: grid;
-  grid-template-columns: 1.4fr auto 1.2fr auto;
-  align-items: center;
+  grid-template-columns: 1.1fr auto 1.6fr auto auto;
+  align-items: start;
   gap: 14px;
   padding: 14px 16px;
+}
+.schedule-host,
+.schedule-meta,
+.schedule-actions {
+  align-self: center;
+}
+.schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .schedule-host {
   display: flex;
@@ -377,8 +387,26 @@ fieldset.field {
 .meal-text {
   min-width: 0;
 }
+.meal-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 68px;
+  font: inherit;
+  line-height: 1.5;
+  border: 1.5px solid var(--menu-gold);
+  border-radius: var(--radius-sm);
+  background: var(--menu-bg);
+  padding: 10px 12px;
+}
+.meal-input:focus {
+  outline: 2px solid var(--gold-light);
+  border-color: var(--menu-gold);
+}
 .meal-text {
   font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Claim identity */
@@ -395,11 +423,6 @@ fieldset.field {
 .claim-names .name-btn {
   width: auto;
   padding: 8px 14px;
-}
-.event-meal {
-  font-style: italic;
-  font-size: 1.1rem;
-  margin: 4px 0 12px;
 }
 .schedule-meta code {
   background: var(--cream);
@@ -697,4 +720,82 @@ fieldset.field {
   .field-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Menu card (inline, under the QR) ───────────────────────────── */
+.menu-card {
+  background: var(--menu-bg);
+  border: 1.5px solid var(--menu-gold);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+.menu-heading {
+  text-align: center;
+  color: var(--menu-gold);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+.menu-text {
+  white-space: pre-wrap; /* keep the cook's line breaks, spacing and emoji */
+  word-break: break-word;
+  line-height: 1.6;
+}
+.menu-empty {
+  margin: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Menu modal ─────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--menu-bg);
+  border: 1.5px solid var(--menu-gold);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  padding: 22px 22px 24px;
+}
+.modal-title {
+  margin: 0 28px 14px 0;
+  font-size: 1.15rem;
+  color: var(--menu-gold);
+}
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.modal-close:hover {
+  background: var(--cream);
+  color: var(--text);
 }

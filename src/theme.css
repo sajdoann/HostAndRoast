@@ -5,6 +5,9 @@
   --gold-light: #e7c56b;
   --gold-dark: #b8862e;
   --gold-gradient: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
+  /* Menu accents (feature spec) */
+  --menu-gold: #d4af37;
+  --menu-bg: #fdfbf7;
 
   /* Neutrals */
   --ink: #1a1a1a;
