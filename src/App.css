@@ -486,6 +486,14 @@ fieldset.field {
   font-size: 1.2rem;
   margin: 20px 0;
 }
+.rate-cta {
+  display: inline-block;
+  margin: 4px 0 16px;
+}
+.show-qr-link {
+  display: inline-block;
+  margin-top: 22px;
+}
 .progress {
   margin-top: 20px;
 }

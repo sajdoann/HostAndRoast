@@ -88,7 +88,8 @@
     "claimHelp": "Pick your name once — then you can edit your own dinner and rate without re-entering it.",
     "youAre": "You're playing as {name}.",
     "results": "View results",
-    "openHost": "Open host view",
+    "rate": "Rate",
+    "showQr": "Show QR",
     "deadline": "Reveal deadline",
     "rated": "{done}/{total} rated",
     "status": {
@@ -117,10 +118,12 @@
   "event": {
     "title": "Host day",
     "hostedBy": "Hosted by {host}",
-    "scanToRate": "Guests: scan to rate tonight's dinner",
+    "scanToRate": "Show this to guests so they can scan and rate — or share the link.",
     "orEnterCode": "or enter code at",
     "rated": "{done} of {total} guests have rated",
     "closed": "Everyone has rated — voting is closed. 🎉",
+    "rateThis": "Rate this dinner",
+    "showQr": "Show event QR",
     "backToSeason": "Back to season"
   },
   "join": {
