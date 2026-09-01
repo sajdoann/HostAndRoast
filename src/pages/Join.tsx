@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
-import { useDB, useJoinTarget, useMyClaim } from "../store/hooks";
+import { useDB, useJoinTarget, useMyClaim, useSeasonByCode } from "../store/hooks";
 import Loading from "../components/Loading";
 import ScoreSlider from "../components/ScoreSlider";
 import { categoriesFor } from "../domain/categories";
@@ -23,6 +23,8 @@ export default function Join() {
   const { user } = useAuth();
   const { code } = useParams();
   const { target, codeState } = useJoinTarget(code);
+  // The same box accepts a season code, so fall back to that before giving up.
+  const { season: seasonByCode } = useSeasonByCode(code);
   const myClaim = useMyClaim(target?.season.id);
   const { ratings: allRatings } = useDB();
 
@@ -36,6 +38,8 @@ export default function Join() {
   if (codeState === "loading") return <Loading />;
 
   if (!target) {
+    // A season code lands on that season's schedule instead of a rating form.
+    if (seasonByCode) return <Navigate to={`/season/${seasonByCode.id}`} replace />;
     return centre(
       <>
         <h1 className="section-title">{t("join.notFoundTitle")}</h1>
@@ -115,7 +119,11 @@ export default function Join() {
                   onClick={() => {
                     setManualRaterId(p.id);
                     // Signed in? Remember this identity for the whole season.
-                    if (user && !myClaim) store.claimPlayer(season.id, user.uid, p.id);
+                    // Best-effort: if that nickname is already held by another
+                    // account, rating still works — they just stay unclaimed.
+                    if (user && !myClaim) {
+                      void store.claimPlayer(season.id, user.uid, p.id).catch(() => {});
+                    }
                   }}
                 >
                   {p.name}

@@ -1,15 +1,29 @@
 import type { DinnerEvent, Player } from "./types";
 import { genCode, genId } from "./ids";
 
+/**
+ * Format a date as ISO `YYYY-MM-DD` in the *local* timezone.
+ *
+ * Never use `toISOString()` for these: a calendar date here means the day the
+ * dinner happens where the players live, and `toISOString()` converts to UTC
+ * first — which lands on the previous day everywhere east of Greenwich (a
+ * dinner picked for Sept 1 in Prague came back as Aug 31).
+ */
+function toISODate(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 /** Add `days` to an ISO `YYYY-MM-DD` date, returning ISO. */
 export function addDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T00:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return toISODate(d);
 }
 
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toISODate(new Date());
 }
 
 /** Google Calendar-style recurrence: "repeat every {value} {unit}". */
@@ -40,7 +54,7 @@ export function addRecurrence(isoDate: string, times: number, recurrence: Recurr
     const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
     d.setDate(Math.min(day, lastDayOfMonth));
   }
-  return d.toISOString().slice(0, 10);
+  return toISODate(d);
 }
 
 /**

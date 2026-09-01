@@ -113,7 +113,9 @@ function createLocalStore(): Store {
     },
 
     claimPlayer(seasonId: string, _uid: string, playerId: string) {
+      // Local mode is one browser, one person — no nickname can be contested.
       commit({ ...state, myClaims: { ...state.myClaims, [seasonId]: playerId } });
+      return Promise.resolve();
     },
 
     addPlayer(seasonId: string, name: string) {

@@ -50,8 +50,11 @@ export interface Store {
   createSeason(season: Season): void;
   /** Edit one dinner (date / meal). Owner or the cook who claimed that player. */
   updateEvent(seasonId: string, event: DinnerEvent): void;
-  /** A signed-in participant claims which player (nickname) they are. */
-  claimPlayer(seasonId: string, uid: string, playerId: string): void;
+  /**
+   * A signed-in participant claims which player (nickname) they are. Nicknames
+   * are first-come-first-served: rejects if another account already holds it.
+   */
+  claimPlayer(seasonId: string, uid: string, playerId: string): Promise<void>;
   deleteSeason(seasonId: string): void;
 
   /** Owner: add a player and an unscheduled dinner for them at the end of the schedule. */

@@ -275,6 +275,7 @@ export default function Season() {
   const { revealed } = useDB();
   const [revealing, setRevealing] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
+  const [claimError, setClaimError] = useState<string | null>(null);
 
   if (!loaded) return <Loading />;
 
@@ -343,12 +344,20 @@ export default function Season() {
                       key={p.id}
                       type="button"
                       className="name-btn"
-                      onClick={() => store.claimPlayer(season.id, user.uid, p.id)}
+                      onClick={() => {
+                        setClaimError(null);
+                        // Nicknames are first-come-first-served — say so when
+                        // someone else's account already holds this one.
+                        store
+                          .claimPlayer(season.id, user.uid, p.id)
+                          .catch(() => setClaimError(t("season.claimTaken", { name: p.name })));
+                      }}
                     >
                       {p.name}
                     </button>
                   ))}
                 </div>
+                {claimError && <p className="form-error">{claimError}</p>}
               </div>
             )
           ) : null)}
@@ -361,9 +370,13 @@ export default function Season() {
             {isRevealed
               ? t("season.reveal.unlockedBody")
               : isOwner
-                ? rstatus.allRatingsIn
-                  ? t("season.revealReady")
-                  : t("season.revealMissing", { n: rstatus.missingRatings })
+                ? // Dinners with no date block the auto-reveal silently, so
+                  // name that before the ratings count.
+                  rstatus.unscheduled > 0
+                  ? t("season.revealUnscheduled", { n: rstatus.unscheduled })
+                  : rstatus.allRatingsIn
+                    ? t("season.revealReady")
+                    : t("season.revealMissing", { n: rstatus.missingRatings })
                 : t("season.reveal.lockedBody")}
           </span>
           {isRevealed ? (

@@ -77,16 +77,18 @@ export function createFirestoreStore(): Store {
     listeners.forEach((l) => l());
   }
 
-  // Subscribe to the current viewer's claim doc for a season (who they are).
+  // Which player the current viewer holds in a season. Claims are keyed by
+  // playerId (so a nickname can't be stolen), so "who am I" is a lookup by uid.
   function subscribeClaim(seasonId: string) {
     claimSubs.get(seasonId)?.();
     claimSubs.delete(seasonId);
     delete myClaims[seasonId];
     if (!viewerUid) return;
     const unsub = onSnapshot(
-      doc(fdb, "seasons", seasonId, "claims", viewerUid),
-      (d) => {
-        if (d.exists()) myClaims[seasonId] = (d.data() as { playerId: string }).playerId;
+      query(collection(fdb, "seasons", seasonId, "claims"), where("uid", "==", viewerUid)),
+      (snap) => {
+        const mine = snap.docs[0];
+        if (mine) myClaims[seasonId] = mine.id;
         else delete myClaims[seasonId];
         rebuild();
       },
@@ -181,18 +183,17 @@ export function createFirestoreStore(): Store {
   }
 
   /**
-   * Bind "this account = this player" for a season. The claim is the identity
-   * that matters (auto-rating, editing your dinner) and is written on its own;
-   * the membership record is a separate best-effort write so a permission issue
-   * on it can never undo the claim.
+   * Bind "this account = this player" for a season. Resolves once the claim
+   * lands and rejects if the nickname is already held by another account, so
+   * the caller can say so. The membership record is a separate best-effort
+   * write, so a permission issue on it can never undo the claim.
    */
-  function bindIdentity(seasonId: string, uid: string, playerId: string) {
-    void setDoc(doc(fdb, "seasons", seasonId, "claims", uid), { playerId }).catch(
-      onError("bindIdentity/claim")
-    );
+  function bindIdentity(seasonId: string, uid: string, playerId: string): Promise<void> {
+    const claim = setDoc(doc(fdb, "seasons", seasonId, "claims", playerId), { uid });
     void setDoc(doc(fdb, "users", uid, "memberships", seasonId), { seasonId }).catch(
       onError("bindIdentity/membership")
     );
+    return claim;
   }
 
   return {
@@ -334,7 +335,7 @@ export function createFirestoreStore(): Store {
     },
 
     claimPlayer(seasonId: string, uid: string, playerId: string) {
-      bindIdentity(seasonId, uid, playerId);
+      return bindIdentity(seasonId, uid, playerId);
     },
 
     addPlayer(seasonId: string, name: string) {
@@ -424,7 +425,13 @@ export function createFirestoreStore(): Store {
       }).catch(onError("receipt"));
 
       // 3. A signed-in rater binds their identity and joins the season list.
-      if (viewerUid) bindIdentity(season.id, viewerUid, rating.raterId);
+      //    Best-effort: if that nickname is already held by another account the
+      //    rating still stands, they just stay unclaimed.
+      if (viewerUid) {
+        void bindIdentity(season.id, viewerUid, rating.raterId).catch(
+          onError("bindIdentity/claim")
+        );
+      }
     },
 
     getResults(seasonId: string) {

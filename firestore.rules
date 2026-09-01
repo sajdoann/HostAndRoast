@@ -22,12 +22,15 @@ service cloud.firestore {
         && request.resource.data.scores.values().hasOnly([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
 
-    // The player id the signed-in user claimed in this season (or null).
-    function claimedPlayer(sid) {
+    // True when the signed-in user holds this season's claim on `playerId`.
+    // Claims are keyed by playerId, so a nickname belongs to whoever took it
+    // first — this is what stops a stranger with the link from asserting
+    // "I am Bob" to read Bob's private feedback.
+    function claimedBy(sid, playerId) {
       return request.auth != null
-        && exists(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/seasons/$(sid)/claims/$(request.auth.uid)).data.playerId
-        : null;
+        && exists(/databases/$(database)/documents/seasons/$(sid)/claims/$(playerId))
+        && get(/databases/$(database)/documents/seasons/$(sid)/claims/$(playerId)).data.uid
+           == request.auth.uid;
     }
 
     function isOwner(sid) {
@@ -55,17 +58,26 @@ service cloud.firestore {
         // own dinner (hostId, code and ownerId must stay unchanged).
         allow update: if request.auth != null && (
           resource.data.ownerId == request.auth.uid
-          || ( claimedPlayer(sid) == resource.data.hostId
+          || ( claimedBy(sid, resource.data.hostId)
                && request.resource.data.hostId == resource.data.hostId
                && request.resource.data.code == resource.data.code
                && request.resource.data.ownerId == resource.data.ownerId )
         );
       }
 
-      // Identity: a signed-in participant claims which player they are.
-      match /claims/{uid} {
+      // Identity: a signed-in participant claims which player (nickname) they
+      // are. Keyed by playerId and first-come-first-served: once a nickname is
+      // taken nobody else can write it, so it can't be used to impersonate a
+      // player and read their private results below.
+      match /claims/{playerId} {
         allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null
+                      && request.resource.data.uid == request.auth.uid;
+        allow update: if request.auth != null
+                      && resource.data.uid == request.auth.uid
+                      && request.resource.data.uid == request.auth.uid;
+        // The organizer can release a claim (someone picked the wrong name).
+        allow delete: if isOwner(sid);
       }
 
       // Scores — write-once, read-never.
@@ -102,13 +114,13 @@ service cloud.firestore {
 
       // A dinner's comments: readable by that dinner's cook or the owner.
       match /feedback/{hostId} {
-        allow read: if claimedPlayer(sid) == hostId || isOwner(sid);
+        allow read: if claimedBy(sid, hostId) || isOwner(sid);
         allow write: if false;
       }
 
       // A rater's own scores: readable by that player or the owner.
       match /raters/{playerId} {
-        allow read: if claimedPlayer(sid) == playerId || isOwner(sid);
+        allow read: if claimedBy(sid, playerId) || isOwner(sid);
         allow write: if false;
       }
     }

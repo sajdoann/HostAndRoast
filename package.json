@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test": "firebase emulators:exec --only firestore --project demo-hr \"vitest run\"",
+    "test:unit": "vitest run tests/schedule.test.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
@@ -19,12 +21,15 @@
     "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/qrcode": "^1.5.5",
-    "@vercel/node": "^3.2.24",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
+    "@vercel/node": "^3.2.24",
     "@vitejs/plugin-react": "^4.3.1",
+    "firebase-tools": "^15.28.2",
     "typescript": "^5.5.4",
-    "vite": "^5.4.3"
+    "vite": "^5.4.3",
+    "vitest": "^4.1.11"
   }
 }

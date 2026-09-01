@@ -35,6 +35,11 @@ export interface RevealStatus {
   deadlinePassed: boolean;
   /** Ratings still outstanding across the season (for a friendly "waiting on N"). */
   missingRatings: number;
+  /**
+   * Dinners with no date yet. These quietly block the auto-reveal (a dinner
+   * with no date can never be "done"), so the organizer needs telling.
+   */
+  unscheduled: number;
 }
 
 /**
@@ -63,5 +68,6 @@ export function revealStatus(
     allRatingsIn,
     deadlinePassed,
     missingRatings,
+    unscheduled: season.events.filter((e) => !e.date).length,
   };
 }
