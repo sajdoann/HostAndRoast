@@ -44,7 +44,9 @@ export function createFirestoreStore(): Store {
   const seasonDocLoaded = new Set<string>();
   const eventsLoaded = new Set<string>();
   const subs = new Map<string, Array<() => void>>();
-  const claimSubs = new Map<string, () => void>(); // viewer's claim doc, per season
+  // seasonId → { playerId: uid }. Public, so it answers both "which nickname am
+  // I?" and "which nicknames are already taken?" without a second listener.
+  const claimsBySeason = new Map<string, Record<string, string>>();
   const myClaims: Record<string, string> = {}; // seasonId → playerId (current viewer)
   const memberships = new Set<string>(); // seasons the viewer participates in
   const codeToSeason = new Map<string, string | null>(); // null = not found
@@ -67,6 +69,14 @@ export function createFirestoreStore(): Store {
     }
     const ratings: Rating[] = [];
     for (const list of receiptsBySeason.values()) ratings.push(...list);
+    // Who the viewer is in each season: the nickname whose claim holds their uid.
+    for (const key of Object.keys(myClaims)) delete myClaims[key];
+    if (viewerUid) {
+      for (const [seasonId, claims] of claimsBySeason) {
+        const mine = Object.entries(claims).find(([, uid]) => uid === viewerUid);
+        if (mine) myClaims[seasonId] = mine[0];
+      }
+    }
     state = {
       seasons,
       ratings,
@@ -77,24 +87,20 @@ export function createFirestoreStore(): Store {
     listeners.forEach((l) => l());
   }
 
-  // Which player the current viewer holds in a season. Claims are keyed by
-  // playerId (so a nickname can't be stolen), so "who am I" is a lookup by uid.
-  function subscribeClaim(seasonId: string) {
-    claimSubs.get(seasonId)?.();
-    claimSubs.delete(seasonId);
-    delete myClaims[seasonId];
-    if (!viewerUid) return;
-    const unsub = onSnapshot(
-      query(collection(fdb, "seasons", seasonId, "claims"), where("uid", "==", viewerUid)),
+  /** Every nickname claim in a season: doc id is the playerId, `uid` its holder. */
+  function claimsListener(seasonId: string) {
+    return onSnapshot(
+      collection(fdb, "seasons", seasonId, "claims"),
       (snap) => {
-        const mine = snap.docs[0];
-        if (mine) myClaims[seasonId] = mine.id;
-        else delete myClaims[seasonId];
+        const claims: Record<string, string> = {};
+        snap.docs.forEach((d) => {
+          claims[d.id] = (d.data() as { uid: string }).uid;
+        });
+        claimsBySeason.set(seasonId, claims);
         rebuild();
       },
-      onError("claim")
+      onError("claims")
     );
-    claimSubs.set(seasonId, unsub);
   }
 
   function mapEvents(seasonId: string, snap: import("firebase/firestore").QuerySnapshot) {
@@ -168,8 +174,9 @@ export function createFirestoreStore(): Store {
       )
     );
 
+    unsubs.push(claimsListener(seasonId));
+
     subs.set(seasonId, unsubs);
-    subscribeClaim(seasonId);
   }
 
   function eventDoc(event: DinnerEvent) {
@@ -218,8 +225,7 @@ export function createFirestoreStore(): Store {
     setViewer(uid: string | null) {
       if (uid === viewerUid) return;
       viewerUid = uid;
-      // Re-point every loaded season's claim subscription at the new viewer.
-      for (const seasonId of subs.keys()) subscribeClaim(seasonId);
+      // Claims are viewer-independent now, so "who am I" just gets recomputed.
       membershipUnsub?.();
       membershipUnsub = null;
       memberships.clear();
@@ -338,6 +344,10 @@ export function createFirestoreStore(): Store {
       return bindIdentity(seasonId, uid, playerId);
     },
 
+    claimedPlayers(seasonId: string) {
+      return Object.keys(claimsBySeason.get(seasonId) ?? {});
+    },
+
     addPlayer(seasonId: string, name: string) {
       const season = state.seasons.find((s) => s.id === seasonId);
       if (!season) return;
@@ -391,8 +401,7 @@ export function createFirestoreStore(): Store {
         .catch(onError("deleteSeason"));
       subs.get(seasonId)?.forEach((u) => u());
       subs.delete(seasonId);
-      claimSubs.get(seasonId)?.();
-      claimSubs.delete(seasonId);
+      claimsBySeason.delete(seasonId);
       delete myClaims[seasonId];
       seasonDocs.delete(seasonId);
       eventsBySeason.delete(seasonId);

@@ -55,6 +55,8 @@ export interface Store {
    * are first-come-first-served: rejects if another account already holds it.
    */
   claimPlayer(seasonId: string, uid: string, playerId: string): Promise<void>;
+  /** Player ids already claimed by someone in this season, so the picker can say so. */
+  claimedPlayers(seasonId: string): string[];
   deleteSeason(seasonId: string): void;
 
   /** Owner: add a player and an unscheduled dinner for them at the end of the schedule. */

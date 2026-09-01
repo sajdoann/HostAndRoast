@@ -297,6 +297,7 @@ export default function Season() {
   const myName = myClaim ? season.players.find((p) => p.id === myClaim)?.name : undefined;
   const isRevealed = revealed.includes(season.id);
   const rstatus = revealStatus(season, ratings);
+  const claimedPlayers = store.claimedPlayers(season.id);
   const seasonJoinUrl = season.code
     ? `${window.location.origin}/s/${season.code}`
     : `${window.location.origin}/season/${season.id}`;
@@ -339,23 +340,31 @@ export default function Season() {
                 <strong>{t("season.claimTitle")}</strong>
                 <p className="muted small">{t("season.claimHelp")}</p>
                 <div className="claim-names">
-                  {season.players.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="name-btn"
-                      onClick={() => {
-                        setClaimError(null);
-                        // Nicknames are first-come-first-served — say so when
-                        // someone else's account already holds this one.
-                        store
-                          .claimPlayer(season.id, user.uid, p.id)
-                          .catch(() => setClaimError(t("season.claimTaken", { name: p.name })));
-                      }}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
+                  {season.players.map((p) => {
+                    // Nicknames are first-come-first-served, so the ones
+                    // already spoken for are shown as such rather than failing
+                    // on click.
+                    const taken = claimedPlayers.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="name-btn"
+                        disabled={taken}
+                        onClick={() => {
+                          setClaimError(null);
+                          store
+                            .claimPlayer(season.id, user.uid, p.id)
+                            .catch(() => setClaimError(t("season.claimError")));
+                        }}
+                      >
+                        {p.name}
+                        {taken && (
+                          <span className="muted small"> · {t("season.claimTakenBadge")}</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 {claimError && <p className="form-error">{claimError}</p>}
               </div>

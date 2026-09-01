@@ -5,7 +5,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 /**
@@ -129,6 +129,14 @@ describe("nickname claims", () => {
 
     const owner = testEnv.authenticatedContext(OWNER).firestore();
     await assertSucceeds(deleteDoc(doc(owner, "seasons", SEASON, "claims", P_ALICE)));
+  });
+
+  it("lets anyone list the claims, so the picker can show which names are taken", async () => {
+    await seed();
+    await seedClaim(P_ALICE, ALICE);
+    const db = testEnv.unauthenticatedContext().firestore();
+    const snap = await assertSucceeds(getDocs(collection(db, "seasons", SEASON, "claims")));
+    expect(snap.docs.map((d) => d.id)).toEqual([P_ALICE]);
   });
 
   it("refuses claims from signed-out visitors", async () => {

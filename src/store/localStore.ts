@@ -118,6 +118,11 @@ function createLocalStore(): Store {
       return Promise.resolve();
     },
 
+    claimedPlayers(seasonId: string) {
+      const mine = state.myClaims[seasonId];
+      return mine ? [mine] : [];
+    },
+
     addPlayer(seasonId: string, name: string) {
       const season = state.seasons.find((s) => s.id === seasonId);
       if (!season) return;
