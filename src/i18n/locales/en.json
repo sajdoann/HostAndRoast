@@ -100,7 +100,6 @@
     "codeNotFoundTitle": "Season not found",
     "codeNotFoundBody": "We couldn't find a season for that code. Double-check with your host.",
     "mealPlaceholder": "What's on the menu?",
-    "noMeal": "No menu yet",
     "claimTitle": "Which name are you?",
     "claimHelp": "Pick your name once — then you can edit your own dinner and rate without re-entering it.",
     "youAre": "You're playing as {name}.",

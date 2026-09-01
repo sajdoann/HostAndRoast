@@ -81,9 +81,7 @@ function DinnerRow({
           onBlur={saveMeal}
         />
       ) : (
-        <span className="meal-text muted">
-          {(event.mealDescription || t("season.noMeal")).split("\n")[0]}
-        </span>
+        <span className="meal-text" />
       )}
 
       <div className="schedule-meta muted">
