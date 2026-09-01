@@ -6,10 +6,9 @@ import { store } from "../store";
 import { useDB, useJoinTarget, useMyClaim } from "../store/hooks";
 import Loading from "../components/Loading";
 import ScoreSlider from "../components/ScoreSlider";
-import { CATEGORIES } from "../domain/categories";
+import { categoriesFor } from "../domain/categories";
 import { isEventComplete, ratingsForEvent } from "../domain/reveal";
 import { hasVoted, markVoted } from "../lib/voteGuard";
-import type { CategoryId } from "../domain/types";
 
 function centre(children: ReactNode) {
   return (
@@ -28,11 +27,7 @@ export default function Join() {
   const { ratings: allRatings } = useDB();
 
   const [manualRaterId, setManualRaterId] = useState<string | null>(null);
-  const [scores, setScores] = useState<Record<CategoryId, number>>({
-    food: 5,
-    atmosphere: 5,
-    entertainment: 5,
-  });
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +49,7 @@ export default function Join() {
 
   const { season, event } = target;
   const host = season.players.find((p) => p.id === event.hostId);
+  const categories = categoriesFor(season, (id) => t(`categories.${id}`));
 
   if (submitted) {
     return centre(
@@ -143,11 +139,14 @@ export default function Join() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const finalScores = Object.fromEntries(
+        categories.map((cat) => [cat.id, scores[cat.id] ?? 5])
+      );
       await store.addRating({
         id: `${event.id}_${raterId}`,
         eventId: event.id,
         raterId,
-        scores,
+        scores: finalScores,
         comment: comment.trim() || undefined,
         createdAt: Date.now(),
       });
@@ -171,12 +170,12 @@ export default function Join() {
       <p className="muted small">{t("join.scoreHelp")}</p>
 
       <div className="rate-form">
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <ScoreSlider
-            key={cat}
-            label={t(`categories.${cat}`)}
-            value={scores[cat]}
-            onChange={(v) => setScores((s) => ({ ...s, [cat]: v }))}
+            key={cat.id}
+            label={cat.label}
+            value={scores[cat.id] ?? 5}
+            onChange={(v) => setScores((s) => ({ ...s, [cat.id]: v }))}
           />
         ))}
 

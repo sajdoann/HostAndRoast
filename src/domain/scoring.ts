@@ -1,12 +1,12 @@
-import type { CategoryId, Rating, Season } from "./types";
-import { CATEGORIES } from "./categories";
+import type { Rating, Season } from "./types";
+import { categoryIdsFor, SCORE_MAX } from "./categories";
 import { ratingsForEvent } from "./reveal";
 
 export interface HostResult {
   hostId: string;
   hostName: string;
-  perCategory: Record<CategoryId, number>; // average per category
-  total: number; // sum of the category averages (max = CATEGORIES.length * 10)
+  perCategory: Record<string, number>; // average per category
+  total: number; // sum of the category averages
   ratingsCount: number;
 }
 
@@ -21,25 +21,27 @@ function round1(n: number): number {
 }
 
 /**
- * Leaderboard: for each host, average each category across their dinner's
- * ratings, then total those averages. Sorted high → low.
+ * Leaderboard: for each host, average each of the season's categories across
+ * their dinner's ratings, then total those averages. Sorted high → low.
+ * A rating missing a category (rated before it was added) is simply skipped
+ * for that category's average, not counted as a zero.
  * Pure and side-effect free — the future Cloud Function can reuse it verbatim.
  */
-export function computeLeaderboard(
-  season: Season,
-  ratings: Rating[]
-): HostResult[] {
+export function computeLeaderboard(season: Season, ratings: Rating[]): HostResult[] {
+  const categoryIds = categoryIdsFor(season);
+
   const results = season.events.map((event): HostResult => {
     const host = season.players.find((p) => p.id === event.hostId);
     const eventRatings = ratingsForEvent(event, ratings);
 
-    const perCategory = {} as Record<CategoryId, number>;
-    for (const cat of CATEGORIES) {
-      perCategory[cat] = round1(average(eventRatings.map((r) => r.scores[cat])));
+    const perCategory = {} as Record<string, number>;
+    for (const cat of categoryIds) {
+      const values = eventRatings
+        .map((r) => r.scores[cat])
+        .filter((v): v is number => typeof v === "number");
+      perCategory[cat] = round1(average(values));
     }
-    const total = round1(
-      CATEGORIES.reduce((sum, cat) => sum + perCategory[cat], 0)
-    );
+    const total = round1(categoryIds.reduce((sum, cat) => sum + perCategory[cat], 0));
 
     return {
       hostId: event.hostId,
@@ -53,7 +55,10 @@ export function computeLeaderboard(
   return results.sort((a, b) => b.total - a.total);
 }
 
-export const MAX_TOTAL = CATEGORIES.length * 10;
+/** Max possible total for a season: SCORE_MAX per category it rates on. */
+export function maxTotalFor(season: Season): number {
+  return categoryIdsFor(season).length * SCORE_MAX;
+}
 
 /** One rater's own view: what they gave each dinner, and their average. */
 export interface RaterStats {
@@ -65,7 +70,7 @@ export interface RaterStats {
 /** The full reveal payload — leaderboard plus everything the results page shows. */
 export interface SeasonStats {
   board: HostResult[];
-  perCategoryWinner: Record<CategoryId, { hostId: string; hostName: string; avg: number } | null>;
+  perCategoryWinner: Record<string, { hostId: string; hostName: string; avg: number } | null>;
   ratingsCount: number;
   /** hostId → the comments left on that dinner (anonymous). */
   feedbackByHost: Record<string, string[]>;
@@ -78,11 +83,12 @@ export interface SeasonStats {
  * Pure and Node-safe — the reveal server calls this directly.
  */
 export function computeSeasonStats(season: Season, ratings: Rating[]): SeasonStats {
+  const categoryIds = categoryIdsFor(season);
   const board = computeLeaderboard(season, ratings);
   const nameOf = (id: string) => season.players.find((p) => p.id === id)?.name ?? "—";
 
   const perCategoryWinner = {} as SeasonStats["perCategoryWinner"];
-  for (const cat of CATEGORIES) {
+  for (const cat of categoryIds) {
     let best: { hostId: string; hostName: string; avg: number } | null = null;
     for (const row of board) {
       if (row.ratingsCount > 0 && (!best || row.perCategory[cat] > best.avg)) {
@@ -103,7 +109,7 @@ export function computeSeasonStats(season: Season, ratings: Rating[]): SeasonSta
   for (const rating of ratings) {
     const event = season.events.find((e) => e.id === rating.eventId);
     if (!event) continue;
-    const total = round1(CATEGORIES.reduce((s, c) => s + (rating.scores[c] ?? 0), 0));
+    const total = round1(categoryIds.reduce((s, c) => s + (rating.scores[c] ?? 0), 0));
     const entry = (raterStats[rating.raterId] ??= {
       playerId: rating.raterId,
       avg: 0,

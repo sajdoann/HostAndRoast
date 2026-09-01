@@ -70,6 +70,11 @@
     "playerPlaceholder": "Jméno hráče",
     "addPlayer": "Přidat hráče",
     "remove": "Odebrat",
+    "categories": "Hodnoticí kategorie",
+    "categoriesHelp": "Z každé bude posuvník 1–10, který hosté hodnotí. Komentář je vždy součástí navíc — začněte třeba jen s jídlem a přidejte další, pokud chcete.",
+    "categoryPlaceholder": "Název kategorie",
+    "addCategory": "Přidat kategorii",
+    "needCategory": "Přidejte alespoň jednu hodnoticí kategorii.",
     "startDate": "Datum první večeře",
     "interval": "Opakovat každý",
     "intervalUnit": {
@@ -86,6 +91,9 @@
   "season": {
     "schedule": "Rozpis",
     "players": "Hráči",
+    "manage": "Spravovat hráče a kategorie",
+    "removePlayerConfirm": "Odebrat {name} a jejich večeři? Tuto akci nelze vrátit.",
+    "categoriesNote": "Komentář je vždy součástí navíc.",
     "shareHint": "Sdílejte odkaz na tuto stránku se všemi hráči. V den večeře otevřete její stránku a ukažte QR kód.",
     "scanToJoin": "Kdokoli může tento kód naskenovat, zobrazit rozpis a připojit se.",
     "orEnterCode": "nebo zadejte kód na",

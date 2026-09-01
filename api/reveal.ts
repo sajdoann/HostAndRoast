@@ -18,17 +18,22 @@ import { getFirestore } from "firebase-admin/firestore";
  * Requires env FIREBASE_SERVICE_ACCOUNT — the service-account JSON as a string.
  */
 
-type CategoryId = "food" | "atmosphere" | "entertainment";
-const CATEGORIES: CategoryId[] = ["food", "atmosphere", "entertainment"];
+// Legacy fixed set — only for seasons created before categories were
+// owner-editable (mirrors src/domain/categories.ts's LEGACY_CATEGORY_IDS).
+const LEGACY_CATEGORY_IDS = ["food", "atmosphere", "entertainment"];
 
 interface Player {
   id: string;
   name: string;
 }
+interface Category {
+  id: string;
+  label: string;
+}
 interface DinnerEvent {
   id: string;
   hostId: string;
-  date: string;
+  date?: string;
   code: string;
   mealDescription?: string;
 }
@@ -36,7 +41,7 @@ interface Rating {
   id: string;
   eventId: string;
   raterId: string;
-  scores: Record<CategoryId, number>;
+  scores: Record<string, number>;
   comment?: string | null;
   createdAt: number;
 }
@@ -46,6 +51,11 @@ interface Season {
   ownerId: string;
   players: Player[];
   events: DinnerEvent[];
+  categories?: Category[];
+}
+
+function categoryIdsFor(season: Season): string[] {
+  return season.categories?.length ? season.categories.map((c) => c.id) : LEGACY_CATEGORY_IDS;
 }
 
 const average = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0);
@@ -54,16 +64,20 @@ const ratingsForEvent = (event: DinnerEvent, ratings: Rating[]) =>
   ratings.filter((r) => r.eventId === event.id);
 
 function computeStats(season: Season, ratings: Rating[]) {
+  const categoryIds = categoryIdsFor(season);
   const nameOf = (id: string) => season.players.find((p) => p.id === id)?.name ?? "—";
 
   const board = season.events
     .map((event) => {
       const eventRatings = ratingsForEvent(event, ratings);
-      const perCategory = {} as Record<CategoryId, number>;
-      for (const cat of CATEGORIES) {
-        perCategory[cat] = round1(average(eventRatings.map((r) => r.scores[cat])));
+      const perCategory: Record<string, number> = {};
+      for (const cat of categoryIds) {
+        const values = eventRatings
+          .map((r) => r.scores[cat])
+          .filter((v): v is number => typeof v === "number");
+        perCategory[cat] = round1(average(values));
       }
-      const total = round1(CATEGORIES.reduce((s, c) => s + perCategory[c], 0));
+      const total = round1(categoryIds.reduce((s, c) => s + perCategory[c], 0));
       return {
         hostId: event.hostId,
         hostName: nameOf(event.hostId),
@@ -74,9 +88,8 @@ function computeStats(season: Season, ratings: Rating[]) {
     })
     .sort((a, b) => b.total - a.total);
 
-  const perCategoryWinner: Record<CategoryId, { hostId: string; hostName: string; avg: number } | null> =
-    {} as never;
-  for (const cat of CATEGORIES) {
+  const perCategoryWinner: Record<string, { hostId: string; hostName: string; avg: number } | null> = {};
+  for (const cat of categoryIds) {
     let best: { hostId: string; hostName: string; avg: number } | null = null;
     for (const row of board) {
       if (row.ratingsCount > 0 && (!best || row.perCategory[cat] > best.avg)) {
@@ -97,7 +110,7 @@ function computeStats(season: Season, ratings: Rating[]) {
   for (const rating of ratings) {
     const event = season.events.find((e) => e.id === rating.eventId);
     if (!event) continue;
-    const total = round1(CATEGORIES.reduce((s, c) => s + (rating.scores[c] ?? 0), 0));
+    const total = round1(categoryIds.reduce((s, c) => s + (rating.scores[c] ?? 0), 0));
     const entry = (raterStats[rating.raterId] ??= { playerId: rating.raterId, avg: 0, perDinner: [] });
     entry.perDinner.push({ hostId: event.hostId, hostName: nameOf(event.hostId), total });
   }
@@ -129,7 +142,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const db = getFirestore();
     const seasonSnap = await db.doc(`seasons/${seasonId}`).get();
     if (!seasonSnap.exists) return res.status(404).json({ error: "season not found" });
-    const seasonData = seasonSnap.data() as { name: string; ownerId: string; players: Player[] };
+    const seasonData = seasonSnap.data() as {
+      name: string;
+      ownerId: string;
+      players: Player[];
+      categories?: Category[];
+    };
     if (seasonData.ownerId !== uid) {
       return res.status(403).json({ error: "only the season owner can reveal" });
     }
@@ -148,6 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ownerId: seasonData.ownerId,
       players: seasonData.players ?? [],
       events,
+      categories: seasonData.categories,
     };
 
     const stats = computeStats(season, ratings);

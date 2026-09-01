@@ -16,6 +16,7 @@ export default function NewSeason() {
 
   const [name, setName] = useState("");
   const [names, setNames] = useState<string[]>(["", ""]);
+  const [categories, setCategories] = useState<string[]>(() => [t("categories.food")]);
   const [startDate, setStartDate] = useState(todayISO());
   const [repeatValue, setRepeatValue] = useState(1);
   const [repeatUnit, setRepeatUnit] = useState<RecurrenceUnit>("week");
@@ -32,11 +33,23 @@ export default function NewSeason() {
     setNames((prev) => prev.filter((_, idx) => idx !== i));
   }
 
+  function setCategoryAt(i: number, value: string) {
+    setCategories((prev) => prev.map((c, idx) => (idx === i ? value : c)));
+  }
+  function addCategory() {
+    setCategories((prev) => [...prev, ""]);
+  }
+  function removeCategory(i: number) {
+    setCategories((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   function submit(e: FormEvent) {
     e.preventDefault();
     const clean = names.map((n) => n.trim()).filter(Boolean);
+    const cleanCategories = categories.map((c) => c.trim()).filter(Boolean);
     if (!name.trim()) return setError(t("new.needName"));
     if (clean.length < 2) return setError(t("new.needPlayers"));
+    if (cleanCategories.length < 1) return setError(t("new.needCategory"));
 
     if (required && !user) return setError(t("auth.needSignIn"));
 
@@ -52,6 +65,7 @@ export default function NewSeason() {
         unit: repeatUnit,
       }),
       code: genCode(),
+      categories: cleanCategories.map((label) => ({ id: genId(), label })),
       revealAt: deadline ? new Date(`${deadline}T23:59:59`).getTime() : undefined,
       createdAt: Date.now(),
     };
@@ -113,6 +127,32 @@ export default function NewSeason() {
             ))}
             <button type="button" className="btn btn-ghost btn-sm" onClick={addPlayer}>
               + {t("new.addPlayer")}
+            </button>
+          </fieldset>
+
+          <fieldset className="field">
+            <legend>{t("new.categories")}</legend>
+            <p className="muted small">{t("new.categoriesHelp")}</p>
+            {categories.map((c, i) => (
+              <div key={i} className="player-row">
+                <input
+                  value={c}
+                  onChange={(e) => setCategoryAt(i, e.target.value)}
+                  placeholder={t("new.categoryPlaceholder")}
+                />
+                {categories.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => removeCategory(i)}
+                  >
+                    {t("new.remove")}
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={addCategory}>
+              + {t("new.addCategory")}
             </button>
           </fieldset>
 

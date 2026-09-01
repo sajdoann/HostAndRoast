@@ -1,4 +1,4 @@
-import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
+import type { Category, DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
 import type { HostResult, RaterStats } from "../domain/scoring";
 
 export interface DB {
@@ -53,6 +53,15 @@ export interface Store {
   /** A signed-in participant claims which player (nickname) they are. */
   claimPlayer(seasonId: string, uid: string, playerId: string): void;
   deleteSeason(seasonId: string): void;
+
+  /** Owner: add a player and an unscheduled dinner for them at the end of the schedule. */
+  addPlayer(seasonId: string, name: string): void;
+  /** Owner: rename a player. */
+  renamePlayer(seasonId: string, playerId: string, name: string): void;
+  /** Owner: remove a player and their hosted dinner. */
+  removePlayer(seasonId: string, playerId: string): void;
+  /** Owner: replace the season's rating categories (the comment field is separate and always kept). */
+  updateCategories(seasonId: string, categories: Category[]): void;
 
   /**
    * Record a rating. Resolves once the rating write lands (so the UI confirms

@@ -70,6 +70,11 @@
     "playerPlaceholder": "Player name",
     "addPlayer": "Add player",
     "remove": "Remove",
+    "categories": "Rating categories",
+    "categoriesHelp": "Each becomes a 1–10 slider guests rate. A comment is always included too — start with just Food, add more if you like.",
+    "categoryPlaceholder": "Category name",
+    "addCategory": "Add category",
+    "needCategory": "Add at least one rating category.",
     "startDate": "First dinner date",
     "interval": "Repeat every",
     "intervalUnit": {
@@ -86,6 +91,9 @@
   "season": {
     "schedule": "Schedule",
     "players": "Players",
+    "manage": "Manage players & categories",
+    "removePlayerConfirm": "Remove {name} and their dinner? This can't be undone.",
+    "categoriesNote": "A comment is always included too.",
     "shareHint": "Share this page's link with everyone playing. Open a dinner on its day to show the QR code.",
     "scanToJoin": "Anyone can scan this to view the schedule and join.",
     "orEnterCode": "or enter code at",

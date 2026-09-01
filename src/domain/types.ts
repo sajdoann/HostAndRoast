@@ -7,11 +7,16 @@
  * attend; scores stay hidden until the season's reveal condition is met.
  */
 
-export type CategoryId = "food" | "atmosphere" | "entertainment";
-
 export interface Player {
   id: string;
   name: string;
+}
+
+/** One rating category (a 1–10 slider). The comment field is separate and
+ *  always present — it isn't part of this configurable list. */
+export interface Category {
+  id: string;
+  label: string;
 }
 
 export interface DinnerEvent {
@@ -45,7 +50,8 @@ export interface Rating {
   eventId: string;
   /** Player id of the guest who rated. */
   raterId: string;
-  scores: Record<CategoryId, number>; // each 1..10
+  /** Category id → score (1..10), for whichever categories the season had at rating time. */
+  scores: Record<string, number>;
   comment?: string;
   createdAt: number;
 }
@@ -63,6 +69,13 @@ export interface Season {
    * this existed still load fine — they just show a plain link, no code.
    */
   code?: string;
+  /**
+   * Rating categories this season uses (owner-editable; comment is separate
+   * and always kept). Unset/empty means a season created before this existed
+   * — it keeps rating on the original fixed three (food, atmosphere,
+   * entertainment) for backward compatibility.
+   */
+  categories?: Category[];
   /** Deadline after which results reveal even if some ratings are missing. */
   revealAt?: number;
   createdAt: number;

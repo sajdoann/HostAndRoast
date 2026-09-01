@@ -5,9 +5,8 @@ import { useAuth } from "../auth/useAuth";
 import { store } from "../store";
 import { useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
-import { MAX_TOTAL, type RaterStats } from "../domain/scoring";
-import { CATEGORIES } from "../domain/categories";
-import type { CategoryId } from "../domain/types";
+import { maxTotalFor, type RaterStats } from "../domain/scoring";
+import { categoriesFor } from "../domain/categories";
 
 export default function Results() {
   const { t } = useI18n();
@@ -79,13 +78,15 @@ export default function Results() {
 
   const topTotal = board[0]?.total ?? 0;
   const noRatings = board.every((r) => r.ratingsCount === 0);
+  const categories = categoriesFor(season, (id) => t(`categories.${id}`));
+  const maxTotal = maxTotalFor(season);
 
   // Per-category winner, computed from the public board.
-  const catWinner = (cat: CategoryId) =>
+  const catWinner = (catId: string) =>
     board
       .filter((r) => r.ratingsCount > 0)
       .reduce<(typeof board)[number] | null>(
-        (best, r) => (!best || r.perCategory[cat] > best.perCategory[cat] ? r : best),
+        (best, r) => (!best || (r.perCategory[catId] ?? 0) > (best.perCategory[catId] ?? 0) ? r : best),
         null
       );
 
@@ -111,10 +112,10 @@ export default function Results() {
                       )}
                     </div>
                     <div className="lb-cats">
-                      {CATEGORIES.map((cat) => (
-                        <span key={cat} className="lb-cat">
-                          <span className="muted small">{t(`categories.${cat}`)}</span>
-                          <strong>{row.perCategory[cat].toFixed(1)}</strong>
+                      {categories.map((cat) => (
+                        <span key={cat.id} className="lb-cat">
+                          <span className="muted small">{cat.label}</span>
+                          <strong>{(row.perCategory[cat.id] ?? 0).toFixed(1)}</strong>
                         </span>
                       ))}
                     </div>
@@ -123,7 +124,7 @@ export default function Results() {
                   <div className="lb-total">
                     <strong>{row.total.toFixed(1)}</strong>
                     <span className="muted small">
-                      {t("results.of")} {MAX_TOTAL}
+                      {t("results.of")} {maxTotal}
                     </span>
                   </div>
                 </li>
@@ -133,13 +134,13 @@ export default function Results() {
             {/* Category winners */}
             <h2 className="subhead">{t("results.categoryWinners")}</h2>
             <div className="cat-winners">
-              {CATEGORIES.map((cat) => {
-                const w = catWinner(cat);
+              {categories.map((cat) => {
+                const w = catWinner(cat.id);
                 return (
-                  <div key={cat} className="card cat-winner">
-                    <span className="muted small">{t(`categories.${cat}`)}</span>
+                  <div key={cat.id} className="card cat-winner">
+                    <span className="muted small">{cat.label}</span>
                     <strong>{w ? w.hostName : "—"}</strong>
-                    {w && <span className="muted small">{w.perCategory[cat].toFixed(1)}</span>}
+                    {w && <span className="muted small">{(w.perCategory[cat.id] ?? 0).toFixed(1)}</span>}
                   </div>
                 );
               })}

@@ -1,4 +1,5 @@
 import {
+  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -11,9 +12,10 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
-import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
+import type { Category, DinnerEvent, JoinTarget, Player, Rating, Season } from "../domain/types";
 import type { HostResult, RaterStats } from "../domain/scoring";
 import { compareEventDates } from "../domain/schedule";
+import { genCode, genId } from "../domain/ids";
 import type { CodeState, DB, Store } from "./types";
 
 /**
@@ -140,7 +142,9 @@ export function createFirestoreStore(): Store {
                 id: d.id,
                 eventId: data.eventId,
                 raterId: data.raterId,
-                scores: { food: 0, atmosphere: 0, entertainment: 0 },
+                // Receipts never carry real scores (ratings are read-never) —
+                // only .length/.eventId/.raterId are ever used from these.
+                scores: {},
                 createdAt: data.createdAt,
               } satisfies Rating;
             })
@@ -302,6 +306,7 @@ export function createFirestoreStore(): Store {
       };
       if (meta.revealAt != null) seasonData.revealAt = meta.revealAt;
       if (meta.code != null) seasonData.code = meta.code;
+      if (meta.categories != null) seasonData.categories = meta.categories;
       batch.set(doc(fdb, "seasons", season.id), seasonData);
       if (meta.code) {
         // Season-level code: same lookup as an event's, minus eventId — lets
@@ -330,6 +335,45 @@ export function createFirestoreStore(): Store {
 
     claimPlayer(seasonId: string, uid: string, playerId: string) {
       bindIdentity(seasonId, uid, playerId);
+    },
+
+    addPlayer(seasonId: string, name: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season) return;
+      const player: Player = { id: genId(), name };
+      const event: DinnerEvent = { id: genId(), seasonId, hostId: player.id, code: genCode() };
+      const batch = writeBatch(fdb);
+      batch.update(doc(fdb, "seasons", seasonId), { players: arrayUnion(player) });
+      batch.set(doc(fdb, "seasons", seasonId, "events", event.id), {
+        ...eventDoc(event),
+        ownerId: season.ownerId,
+      });
+      batch.set(doc(fdb, "codes", event.code), { seasonId, eventId: event.id });
+      batch.commit().catch(onError("addPlayer"));
+    },
+
+    renamePlayer(seasonId: string, playerId: string, name: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season) return;
+      const players = season.players.map((p) => (p.id === playerId ? { ...p, name } : p));
+      void updateDoc(doc(fdb, "seasons", seasonId), { players }).catch(onError("renamePlayer"));
+    },
+
+    removePlayer(seasonId: string, playerId: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season) return;
+      const event = season.events.find((e) => e.hostId === playerId);
+      const players = season.players.filter((p) => p.id !== playerId);
+      const batch = writeBatch(fdb);
+      batch.update(doc(fdb, "seasons", seasonId), { players });
+      if (event) batch.delete(doc(fdb, "seasons", seasonId, "events", event.id));
+      batch.commit().catch(onError("removePlayer"));
+    },
+
+    updateCategories(seasonId: string, categories: Category[]) {
+      void updateDoc(doc(fdb, "seasons", seasonId), { categories }).catch(
+        onError("updateCategories")
+      );
     },
 
     deleteSeason(seasonId: string) {

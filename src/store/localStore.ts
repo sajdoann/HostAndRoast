@@ -1,5 +1,6 @@
-import type { DinnerEvent, JoinTarget, Rating, Season } from "../domain/types";
+import type { Category, DinnerEvent, JoinTarget, Player, Rating, Season } from "../domain/types";
 import { computeLeaderboard, computeSeasonStats } from "../domain/scoring";
+import { genCode, genId } from "../domain/ids";
 import type { CodeState, DB, Store } from "./types";
 
 /**
@@ -59,6 +60,13 @@ function createLocalStore(): Store {
     };
   }
 
+  function mapSeason(seasonId: string, patch: (s: Season) => Season): DB {
+    return {
+      ...state,
+      seasons: state.seasons.map((s) => (s.id === seasonId ? patch(s) : s)),
+    };
+  }
+
   return {
     getState: () => state,
     isLoaded: () => true,
@@ -106,6 +114,57 @@ function createLocalStore(): Store {
 
     claimPlayer(seasonId: string, _uid: string, playerId: string) {
       commit({ ...state, myClaims: { ...state.myClaims, [seasonId]: playerId } });
+    },
+
+    addPlayer(seasonId: string, name: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season) return;
+      const player: Player = { id: genId(), name };
+      commit(
+        mapSeason(seasonId, (s) => ({
+          ...s,
+          players: [...s.players, player],
+          events: [
+            ...s.events,
+            {
+              id: genId(),
+              seasonId,
+              hostId: player.id,
+              code: genCode(),
+            },
+          ],
+        }))
+      );
+    },
+
+    renamePlayer(seasonId: string, playerId: string, name: string) {
+      commit(
+        mapSeason(seasonId, (s) => ({
+          ...s,
+          players: s.players.map((p) => (p.id === playerId ? { ...p, name } : p)),
+        }))
+      );
+    },
+
+    removePlayer(seasonId: string, playerId: string) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      const removedEvent = season?.events.find((e) => e.hostId === playerId);
+      const myClaims = { ...state.myClaims };
+      if (myClaims[seasonId] === playerId) delete myClaims[seasonId];
+      const next = mapSeason(seasonId, (s) => ({
+        ...s,
+        players: s.players.filter((p) => p.id !== playerId),
+        events: s.events.filter((e) => e.hostId !== playerId),
+      }));
+      commit({
+        ...next,
+        ratings: next.ratings.filter((r) => r.eventId !== removedEvent?.id),
+        myClaims,
+      });
+    },
+
+    updateCategories(seasonId: string, categories: Category[]) {
+      commit(mapSeason(seasonId, (s) => ({ ...s, categories })));
     },
 
     deleteSeason(seasonId: string) {

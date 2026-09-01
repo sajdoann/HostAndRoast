@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useAuth } from "../auth/useAuth";
@@ -10,7 +10,9 @@ import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
 import { compareEventDates, todayISO } from "../domain/schedule";
 import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
-import type { DinnerEvent, Season as SeasonModel } from "../domain/types";
+import { categoriesFor } from "../domain/categories";
+import { genId } from "../domain/ids";
+import type { DinnerEvent, Player, Season as SeasonModel } from "../domain/types";
 
 function statusKey(event: DinnerEvent, season: SeasonModel, ratingsIn: number): string {
   if (ratingsIn >= expectedRatings(season)) return "complete";
@@ -111,6 +113,155 @@ function DinnerRow({
           text={event.mealDescription}
           onClose={() => setMenuOpen(false)}
         />
+      )}
+    </div>
+  );
+}
+
+/** One player's name in the owner's manage panel: editable inline, save on blur. */
+function PlayerRow({
+  seasonId,
+  player,
+  canRemove,
+  onRemove,
+}: {
+  seasonId: string;
+  player: Player;
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
+  const { t } = useI18n();
+  const [name, setName] = useState(player.name);
+
+  function save() {
+    const trimmed = name.trim();
+    if (trimmed && trimmed !== player.name) {
+      store.renamePlayer(seasonId, player.id, trimmed);
+    } else {
+      setName(player.name);
+    }
+  }
+
+  return (
+    <div className="manage-row">
+      <input className="manage-input" value={name} onChange={(e) => setName(e.target.value)} onBlur={save} />
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm danger"
+        disabled={!canRemove}
+        title={canRemove ? undefined : t("new.needPlayers")}
+        onClick={onRemove}
+      >
+        {t("new.remove")}
+      </button>
+    </div>
+  );
+}
+
+/** Owner-only: add/remove players and rating categories. Collapsed by default. */
+function SeasonManage({ season }: { season: SeasonModel }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [newCategoryLabel, setNewCategoryLabel] = useState("");
+
+  const categories = categoriesFor(season, (id) => t(`categories.${id}`));
+
+  function addPlayer(e: FormEvent) {
+    e.preventDefault();
+    const name = newPlayerName.trim();
+    if (!name) return;
+    store.addPlayer(season.id, name);
+    setNewPlayerName("");
+  }
+
+  function removePlayer(playerId: string, name: string) {
+    if (confirm(t("season.removePlayerConfirm", { name }))) {
+      store.removePlayer(season.id, playerId);
+    }
+  }
+
+  function addCategory(e: FormEvent) {
+    e.preventDefault();
+    const label = newCategoryLabel.trim();
+    if (!label) return;
+    store.updateCategories(season.id, [...categories, { id: genId(), label }]);
+    setNewCategoryLabel("");
+  }
+
+  function removeCategory(categoryId: string) {
+    store.updateCategories(
+      season.id,
+      categories.filter((c) => c.id !== categoryId)
+    );
+  }
+
+  return (
+    <div className="manage-panel card">
+      <button type="button" className="manage-toggle" onClick={() => setOpen((o) => !o)}>
+        <strong>{t("season.manage")}</strong>
+        <span className="muted small">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="manage-body">
+          <div className="manage-section">
+            <h3 className="manage-heading">{t("season.players")}</h3>
+            <div className="manage-list">
+              {season.players.map((p) => (
+                <PlayerRow
+                  key={p.id}
+                  seasonId={season.id}
+                  player={p}
+                  canRemove={season.players.length > 2}
+                  onRemove={() => removePlayer(p.id, p.name)}
+                />
+              ))}
+            </div>
+            <form className="manage-add-row" onSubmit={addPlayer}>
+              <input
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                placeholder={t("new.playerPlaceholder")}
+              />
+              <button type="submit" className="btn btn-ghost btn-sm">
+                + {t("new.addPlayer")}
+              </button>
+            </form>
+          </div>
+
+          <div className="manage-section">
+            <h3 className="manage-heading">{t("new.categories")}</h3>
+            <div className="manage-chips">
+              {categories.map((c) => (
+                <span key={c.id} className="manage-chip">
+                  {c.label}
+                  <button
+                    type="button"
+                    className="chip-remove"
+                    disabled={categories.length <= 1}
+                    title={categories.length > 1 ? undefined : t("new.needCategory")}
+                    aria-label={t("new.remove")}
+                    onClick={() => removeCategory(c.id)}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+            <form className="manage-add-row" onSubmit={addCategory}>
+              <input
+                value={newCategoryLabel}
+                onChange={(e) => setNewCategoryLabel(e.target.value)}
+                placeholder={t("new.categoryPlaceholder")}
+              />
+              <button type="submit" className="btn btn-ghost btn-sm">
+                + {t("new.addCategory")}
+              </button>
+            </form>
+            <p className="muted small">{t("season.categoriesNote")}</p>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -233,6 +384,8 @@ export default function Season() {
           ) : null}
         </div>
         {revealError && <p className="form-error">{revealError}</p>}
+
+        {isOwner && <SeasonManage season={season} />}
 
         <h2 className="subhead">{t("season.schedule")}</h2>
         <p className="muted small">{t("season.shareHint")}</p>

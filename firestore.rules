@@ -12,8 +12,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function scores() { return request.resource.data.scores; }
-    function validScore(v) { return v is int && v >= 1 && v <= 10; }
+    // Rating categories are owner-editable per season (any id/count), so
+    // scores can't be validated by fixed field names — just that every
+    // value submitted is a valid 1-10 int, on a reasonably sized map.
+    function validScores() {
+      return request.resource.data.scores is map
+        && request.resource.data.scores.size() >= 1
+        && request.resource.data.scores.size() <= 12
+        && request.resource.data.scores.values().hasOnly([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    }
 
     // The player id the signed-in user claimed in this season (or null).
     function claimedPlayer(sid) {
@@ -64,9 +71,7 @@ service cloud.firestore {
       // Scores — write-once, read-never.
       match /ratings/{ratingId} {
         allow read: if false;
-        allow create: if validScore(scores().food)
-                      && validScore(scores().atmosphere)
-                      && validScore(scores().entertainment);
+        allow create: if validScores();
         allow update, delete: if false;
       }
 
