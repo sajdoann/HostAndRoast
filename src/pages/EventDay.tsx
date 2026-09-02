@@ -5,7 +5,8 @@ import Loading from "../components/Loading";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
 import MenuCard from "../components/MenuCard";
-import { expectedRatings, isEventComplete, ratingsForEvent } from "../domain/reveal";
+import { hostNameOf, isHostHousehold } from "../domain/households";
+import { expectedRatings, householdVotes, isEventComplete } from "../domain/reveal";
 
 export default function EventDay() {
   const { t } = useI18n();
@@ -30,19 +31,19 @@ export default function EventDay() {
     );
   }
 
-  const host = season.players.find((p) => p.id === event.hostId);
-  const done = ratingsForEvent(event, ratings).length;
+  const hostName = hostNameOf(season, event.hostId);
+  const done = householdVotes(event, season, ratings);
   const expected = expectedRatings(season);
   const closed = isEventComplete(event, season, ratings);
   const joinUrl = `${window.location.origin}/join/${event.code}`;
   // The cook can't rate their own dinner; everyone else gets a direct rate link.
-  const isCook = !!myClaim && myClaim === event.hostId;
+  const isCook = isHostHousehold(season, event.hostId, myClaim);
 
   return (
     <section className="section">
       <div className="container center-narrow event-day">
         <p className="eyebrow">{t("event.title")}</p>
-        <h1 className="section-title">{t("event.hostedBy", { host: host?.name ?? "—" })}</h1>
+        <h1 className="section-title">{t("event.hostedBy", { host: hostName })}</h1>
 
         {closed ? (
           <p className="event-closed">{t("event.closed")}</p>

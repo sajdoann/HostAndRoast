@@ -16,6 +16,8 @@ export default function NewSeason() {
 
   const [name, setName] = useState("");
   const [names, setNames] = useState<string[]>(["", ""]);
+  // index → index of the player they cook with, or null for their own kitchen
+  const [cooksWith, setCooksWith] = useState<(number | null)[]>([null, null]);
   const [categories, setCategories] = useState<string[]>(() => [t("categories.food")]);
   const [startDate, setStartDate] = useState(todayISO());
   const [repeatValue, setRepeatValue] = useState(1);
@@ -28,9 +30,19 @@ export default function NewSeason() {
   }
   function addPlayer() {
     setNames((prev) => [...prev, ""]);
+    setCooksWith((prev) => [...prev, null]);
   }
   function removePlayer(i: number) {
     setNames((prev) => prev.filter((_, idx) => idx !== i));
+    // Drop the row and re-point anyone who cooked with a now-shifted player.
+    setCooksWith((prev) =>
+      prev
+        .filter((_, idx) => idx !== i)
+        .map((w) => (w === i ? null : w != null && w > i ? w - 1 : w))
+    );
+  }
+  function setCooksWithAt(i: number, value: number | null) {
+    setCooksWith((prev) => prev.map((w, idx) => (idx === i ? value : w)));
   }
 
   function setCategoryAt(i: number, value: string) {
@@ -53,7 +65,16 @@ export default function NewSeason() {
 
     if (required && !user) return setError(t("auth.needSignIn"));
 
-    const players: Player[] = clean.map((n) => ({ id: genId(), name: n }));
+    // Keep only the rows that got a name, then turn "cooks with row N" into
+    // the household lead's player id.
+    const kept = names.map((n, i) => ({ name: n.trim(), i })).filter((row) => row.name);
+    const players: Player[] = kept.map((row) => ({ id: genId(), name: row.name }));
+    const rowToPlayer = new Map(kept.map((row, idx) => [row.i, players[idx]]));
+    kept.forEach((row, idx) => {
+      const lead = cooksWith[row.i] != null ? rowToPlayer.get(cooksWith[row.i]!) : undefined;
+      if (lead && lead.id !== players[idx].id) players[idx].householdId = lead.id;
+    });
+
     const seasonId = genId();
     const season: Season = {
       id: seasonId,
@@ -114,6 +135,25 @@ export default function NewSeason() {
                   onChange={(e) => setNameAt(i, e.target.value)}
                   placeholder={t("new.playerPlaceholder")}
                 />
+                <select
+                  className="manage-household"
+                  value={cooksWith[i] ?? ""}
+                  aria-label={t("season.cooksWith")}
+                  onChange={(e) =>
+                    setCooksWithAt(i, e.target.value === "" ? null : Number(e.target.value))
+                  }
+                >
+                  <option value="">{t("season.cooksAlone")}</option>
+                  {names.map((other, j) =>
+                    // Only offer people leading their own kitchen, so a couple
+                    // can grow into a trio without tangling into a chain.
+                    j === i || !other.trim() || cooksWith[j] != null ? null : (
+                      <option key={j} value={j}>
+                        {t("season.cooksWithName", { name: other.trim() })}
+                      </option>
+                    )
+                  )}
+                </select>
                 {names.length > 2 && (
                   <button
                     type="button"
@@ -128,6 +168,7 @@ export default function NewSeason() {
             <button type="button" className="btn btn-ghost btn-sm" onClick={addPlayer}>
               + {t("new.addPlayer")}
             </button>
+            <p className="muted small">{t("season.householdsHelp")}</p>
           </fieldset>
 
           <fieldset className="field">

@@ -1,4 +1,5 @@
 import type { DinnerEvent, Player } from "./types";
+import { householdsOf } from "./households";
 import { genCode, genId } from "./ids";
 
 /**
@@ -58,11 +59,11 @@ export function addRecurrence(isoDate: string, times: number, recurrence: Recurr
 }
 
 /**
- * Round-robin schedule: one host per dinner, in player order, starting on
- * `startDate` and repeating by `recurrence` (default: every 1 week) — like
- * Google Calendar's "starts on / repeats every" recurrence. Dates are
- * editable afterwards by the organizer, including clearing one to leave that
- * dinner unscheduled.
+ * Round-robin schedule: one dinner per household (a couple cooking together
+ * hosts once, not twice), in player order, starting on `startDate` and
+ * repeating by `recurrence` (default: every 1 week) — like Google Calendar's
+ * "starts on / repeats every" recurrence. Dates are editable afterwards by the
+ * organizer, including clearing one to leave that dinner unscheduled.
  */
 export function buildSchedule(
   seasonId: string,
@@ -70,10 +71,10 @@ export function buildSchedule(
   startDate: string,
   recurrence: Recurrence = { value: 1, unit: "week" }
 ): DinnerEvent[] {
-  return players.map((player, i) => ({
+  return householdsOf({ players }).map((household, i) => ({
     id: genId(),
     seasonId,
-    hostId: player.id,
+    hostId: household.id,
     date: addRecurrence(startDate, i, recurrence),
     code: genCode(),
   }));

@@ -10,6 +10,12 @@
 export interface Player {
   id: string;
   name: string;
+  /**
+   * The player id of the household this player cooks with (a couple, flatmates
+   * — whoever shares one kitchen). Unset means they cook alone. A household
+   * hosts one dinner together and casts one shared vote on everyone else's.
+   */
+  householdId?: string;
 }
 
 /** One rating category (a 1–10 slider). The comment field is separate and

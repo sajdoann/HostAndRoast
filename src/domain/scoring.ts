@@ -1,5 +1,6 @@
 import type { Rating, Season } from "./types";
 import { categoryIdsFor, SCORE_MAX } from "./categories";
+import { householdIdOf, hostNameOf } from "./households";
 import { ratingsForEvent } from "./reveal";
 
 export interface HostResult {
@@ -20,35 +21,78 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+/** A rating and the share of its household's single vote that it carries. */
+interface WeightedRating {
+  rating: Rating;
+  weight: number;
+}
+
 /**
- * Leaderboard: for each host, average each of the season's categories across
- * their dinner's ratings, then total those averages. Sorted high → low.
- * A rating missing a category (rated before it was added) is simply skipped
- * for that category's average, not counted as a zero.
- * Pure and side-effect free — the future Cloud Function can reuse it verbatim.
+ * Split each household's one vote between whoever in it actually rated: two
+ * partners who both rated carry half each, and one who rates alone carries
+ * the household's full vote rather than half of it. Ratings from people no
+ * longer in the season are dropped.
+ */
+function weightedRatings(season: Season, eventRatings: Rating[]): WeightedRating[] {
+  const byHousehold = new Map<string, Rating[]>();
+  for (const rating of eventRatings) {
+    const player = season.players.find((p) => p.id === rating.raterId);
+    if (!player) continue; // a player who has since left the season
+    const id = householdIdOf(player);
+    const existing = byHousehold.get(id);
+    if (existing) existing.push(rating);
+    else byHousehold.set(id, [rating]);
+  }
+
+  const weighted: WeightedRating[] = [];
+  for (const group of byHousehold.values()) {
+    for (const rating of group) weighted.push({ rating, weight: 1 / group.length });
+  }
+  return weighted;
+}
+
+/** Weighted mean of one category, over the ratings that actually scored it. */
+function weightedAverage(weighted: WeightedRating[], categoryId: string): number {
+  let total = 0;
+  let weight = 0;
+  for (const { rating, weight: w } of weighted) {
+    const score = rating.scores[categoryId];
+    if (typeof score !== "number") continue; // rated before this category existed
+    total += score * w;
+    weight += w;
+  }
+  return weight === 0 ? 0 : total / weight;
+}
+
+/**
+ * Leaderboard: for each dinner, average each of the season's categories across
+ * the votes it received, then total those averages. Sorted high → low.
+ *
+ * Every household gets one vote, split between whichever of its members rated,
+ * so a couple can't outvote a single guest. A rating missing a category (rated
+ * before it was added) is skipped for that category, not counted as a zero.
+ * Pure and side-effect free — the reveal server reuses this shape verbatim.
  */
 export function computeLeaderboard(season: Season, ratings: Rating[]): HostResult[] {
   const categoryIds = categoryIdsFor(season);
 
   const results = season.events.map((event): HostResult => {
-    const host = season.players.find((p) => p.id === event.hostId);
-    const eventRatings = ratingsForEvent(event, ratings);
+    const weighted = weightedRatings(season, ratingsForEvent(event, ratings));
 
     const perCategory = {} as Record<string, number>;
     for (const cat of categoryIds) {
-      const values = eventRatings
-        .map((r) => r.scores[cat])
-        .filter((v): v is number => typeof v === "number");
-      perCategory[cat] = round1(average(values));
+      perCategory[cat] = round1(weightedAverage(weighted, cat));
     }
     const total = round1(categoryIds.reduce((sum, cat) => sum + perCategory[cat], 0));
 
     return {
       hostId: event.hostId,
-      hostName: host?.name ?? "—",
+      hostName: hostNameOf(season, event.hostId),
       perCategory,
       total,
-      ratingsCount: eventRatings.length,
+      // Votes, not ratings: each household's weights sum to exactly 1, so the
+      // total weight is the number of kitchens that voted.
+      ratingsCount: Math.round(weighted.reduce((sum, w) => sum + w.weight, 0)),
     };
   });
 
@@ -85,7 +129,8 @@ export interface SeasonStats {
 export function computeSeasonStats(season: Season, ratings: Rating[]): SeasonStats {
   const categoryIds = categoryIdsFor(season);
   const board = computeLeaderboard(season, ratings);
-  const nameOf = (id: string) => season.players.find((p) => p.id === id)?.name ?? "—";
+  // Dinners belong to a kitchen, so they're labelled with the household name.
+  const nameOf = (hostId: string) => hostNameOf(season, hostId);
 
   const perCategoryWinner = {} as SeasonStats["perCategoryWinner"];
   for (const cat of categoryIds) {

@@ -65,6 +65,12 @@ export interface Store {
   renamePlayer(seasonId: string, playerId: string, name: string): void;
   /** Owner: remove a player and their hosted dinner. */
   removePlayer(seasonId: string, playerId: string): void;
+  /**
+   * Owner: put a player in a household (they cook with `householdId`, sharing
+   * one dinner and one vote) or `undefined` to give them their own kitchen
+   * back. Their dinner is removed when joining and restored when leaving.
+   */
+  setHousehold(seasonId: string, playerId: string, householdId: string | undefined): void;
   /** Owner: replace the season's rating categories (the comment field is separate and always kept). */
   updateCategories(seasonId: string, categories: Category[]): void;
 

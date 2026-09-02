@@ -437,6 +437,12 @@ fieldset.field {
   padding: 8px 14px;
 }
 
+.manage-household,
+.player-row .manage-household {
+  flex: 0 1 12rem;
+  min-width: 0;
+}
+
 /* Season management (owner: players + rating categories) */
 .manage-panel {
   margin: 14px 0 24px;

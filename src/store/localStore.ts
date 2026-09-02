@@ -1,5 +1,6 @@
 import type { Category, DinnerEvent, JoinTarget, Player, Rating, Season } from "../domain/types";
 import { computeLeaderboard, computeSeasonStats } from "../domain/scoring";
+import { applyRosterChange, withHousehold, withoutPlayer } from "../domain/households";
 import { genCode, genId } from "../domain/ids";
 import type { CodeState, DB, Store } from "./types";
 
@@ -155,18 +156,41 @@ function createLocalStore(): Store {
 
     removePlayer(seasonId: string, playerId: string) {
       const season = state.seasons.find((s) => s.id === seasonId);
-      const removedEvent = season?.events.find((e) => e.hostId === playerId);
+      if (!season) return;
+      const change = withoutPlayer(season, playerId);
+      const dropped = season.events.filter((e) => change.dropDinnerFor.includes(e.hostId));
       const myClaims = { ...state.myClaims };
       if (myClaims[seasonId] === playerId) delete myClaims[seasonId];
+
       const next = mapSeason(seasonId, (s) => ({
         ...s,
-        players: s.players.filter((p) => p.id !== playerId),
-        events: s.events.filter((e) => e.hostId !== playerId),
+        players: change.players,
+        events: applyRosterChange(s.events, change, seasonId),
       }));
       commit({
         ...next,
-        ratings: next.ratings.filter((r) => r.eventId !== removedEvent?.id),
+        // Their votes on other dinners go too, so they can't sway a season
+        // they've left.
+        ratings: next.ratings.filter(
+          (r) => r.raterId !== playerId && !dropped.some((e) => e.id === r.eventId)
+        ),
         myClaims,
+      });
+    },
+
+    setHousehold(seasonId: string, playerId: string, householdId: string | undefined) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (!season) return;
+      const change = withHousehold(season, playerId, householdId);
+      const dropped = season.events.filter((e) => change.dropDinnerFor.includes(e.hostId));
+      const next = mapSeason(seasonId, (s) => ({
+        ...s,
+        players: change.players,
+        events: applyRosterChange(s.events, change, seasonId),
+      }));
+      commit({
+        ...next,
+        ratings: next.ratings.filter((r) => !dropped.some((e) => e.id === r.eventId)),
       });
     },
 

@@ -7,6 +7,7 @@ import { useDB, useJoinTarget, useMyClaim, useSeasonByCode } from "../store/hook
 import Loading from "../components/Loading";
 import ScoreSlider from "../components/ScoreSlider";
 import { categoriesFor } from "../domain/categories";
+import { hostNameOf, isHostHousehold, ratersFor } from "../domain/households";
 import { isEventComplete, ratingsForEvent } from "../domain/reveal";
 import { hasVoted, markVoted } from "../lib/voteGuard";
 
@@ -52,7 +53,9 @@ export default function Join() {
   }
 
   const { season, event } = target;
-  const host = season.players.find((p) => p.id === event.hostId);
+  // Dinners belong to a kitchen, so both partners of a hosting couple are
+  // hosts here — neither of them rates their own dinner.
+  const hostName = hostNameOf(season, event.hostId);
   const categories = categoriesFor(season, (id) => t(`categories.${id}`));
 
   if (submitted) {
@@ -84,11 +87,11 @@ export default function Join() {
     );
   }
 
-  // If you're the host tonight, you don't rate your own dinner.
-  if (myClaim && myClaim === event.hostId) {
+  // If you cook in tonight's kitchen, you don't rate your own dinner.
+  if (isHostHousehold(season, event.hostId, myClaim)) {
     return centre(
       <>
-        <h1 className="section-title">{t("event.hostedBy", { host: host?.name ?? "—" })}</h1>
+        <h1 className="section-title">{t("event.hostedBy", { host: hostName })}</h1>
         <p className="muted">{t("join.youAreHost")}</p>
       </>
     );
@@ -96,19 +99,18 @@ export default function Join() {
 
   const ratedIds = new Set(liveRatings.map((r) => r.raterId));
   // Auto-identity from a claimed nickname, else whatever the guest picks.
-  const raterId = manualRaterId ?? (myClaim && myClaim !== event.hostId ? myClaim : null);
+  const raterId =
+    manualRaterId ?? (myClaim && !isHostHousehold(season, event.hostId, myClaim) ? myClaim : null);
 
   if (!raterId) {
     return centre(
       <>
-        <p className="eyebrow">{t("event.hostedBy", { host: host?.name ?? "—" })}</p>
+        <p className="eyebrow">{t("event.hostedBy", { host: hostName })}</p>
         <h1 className="section-title">{t("join.pickName")}</h1>
         <p className="muted">{t("join.pickHelp")}</p>
-        <p className="muted small">{t("join.hostNote", { host: host?.name ?? "—" })}</p>
+        <p className="muted small">{t("join.hostNote", { host: hostName })}</p>
         <div className="name-list">
-          {season.players
-            .filter((p) => p.id !== event.hostId)
-            .map((p) => {
+          {ratersFor(season, event.hostId).map((p) => {
               const already = ratedIds.has(p.id);
               return (
                 <button
@@ -173,7 +175,7 @@ export default function Join() {
 
   return centre(
     <>
-      <h1 className="section-title">{t("join.rateTitle", { host: host?.name ?? "—" })}</h1>
+      <h1 className="section-title">{t("join.rateTitle", { host: hostName })}</h1>
       {raterName && <p className="muted small">{t("join.ratingAs", { name: raterName })}</p>}
       <p className="muted small">{t("join.scoreHelp")}</p>
 

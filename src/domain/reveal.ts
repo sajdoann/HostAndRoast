@@ -1,25 +1,44 @@
 import type { DinnerEvent, Rating, Season } from "./types";
+import { householdCount, householdIdOf } from "./households";
 import { todayISO } from "./schedule";
 
 /**
- * How many ratings an event expects: everyone in the season except the host.
- * (The host never rates their own dinner.)
+ * How many votes an event expects: every kitchen except the one hosting.
+ * A household votes once however many people are in it, so this counts
+ * households, not heads.
  */
 export function expectedRatings(season: Season): number {
-  return Math.max(season.players.length - 1, 0);
+  return Math.max(householdCount(season) - 1, 0);
 }
 
 export function ratingsForEvent(event: DinnerEvent, ratings: Rating[]): Rating[] {
   return ratings.filter((r) => r.eventId === event.id);
 }
 
-/** An event is complete once every expected guest has rated. */
+/**
+ * Votes in so far on a dinner: distinct households that rated it. Two partners
+ * who both rated still count as the one vote their kitchen gets.
+ */
+export function householdVotes(
+  event: DinnerEvent,
+  season: Season,
+  ratings: Rating[]
+): number {
+  const voted = new Set<string>();
+  for (const rating of ratingsForEvent(event, ratings)) {
+    const player = season.players.find((p) => p.id === rating.raterId);
+    if (player) voted.add(householdIdOf(player));
+  }
+  return voted.size;
+}
+
+/** An event is complete once every expected household has voted. */
 export function isEventComplete(
   event: DinnerEvent,
   season: Season,
   ratings: Rating[]
 ): boolean {
-  return ratingsForEvent(event, ratings).length >= expectedRatings(season);
+  return householdVotes(event, season, ratings) >= expectedRatings(season);
 }
 
 /** A host date has passed when it's set and strictly before today (an
@@ -56,7 +75,7 @@ export function revealStatus(
 
   let missingRatings = 0;
   for (const event of season.events) {
-    const have = ratingsForEvent(event, ratings).length;
+    const have = householdVotes(event, season, ratings);
     missingRatings += Math.max(expectedRatings(season) - have, 0);
   }
   const allRatingsIn = missingRatings === 0 && season.events.length > 0;

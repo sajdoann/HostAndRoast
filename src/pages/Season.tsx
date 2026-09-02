@@ -9,8 +9,9 @@ import MenuModal from "../components/MenuModal";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
 import { compareEventDates, todayISO } from "../domain/schedule";
-import { expectedRatings, ratingsForEvent, revealStatus } from "../domain/reveal";
+import { expectedRatings, householdVotes, revealStatus } from "../domain/reveal";
 import { categoriesFor } from "../domain/categories";
+import { hostNameOf, isHostHousehold } from "../domain/households";
 import { genId } from "../domain/ids";
 import type { DinnerEvent, Player, Season as SeasonModel } from "../domain/types";
 
@@ -40,7 +41,7 @@ function DinnerRow({
   const { t } = useI18n();
   const [meal, setMeal] = useState(event.mealDescription ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
-  const hostName = season.players.find((p) => p.id === event.hostId)?.name ?? "—";
+  const hostName = hostNameOf(season, event.hostId);
   const key = statusKey(event, season, ratingsCount);
 
   function saveMeal() {
@@ -118,12 +119,12 @@ function DinnerRow({
 
 /** One player's name in the owner's manage panel: editable inline, save on blur. */
 function PlayerRow({
-  seasonId,
+  season,
   player,
   canRemove,
   onRemove,
 }: {
-  seasonId: string;
+  season: SeasonModel;
   player: Player;
   canRemove: boolean;
   onRemove: () => void;
@@ -134,15 +135,35 @@ function PlayerRow({
   function save() {
     const trimmed = name.trim();
     if (trimmed && trimmed !== player.name) {
-      store.renamePlayer(seasonId, player.id, trimmed);
+      store.renamePlayer(season.id, player.id, trimmed);
     } else {
       setName(player.name);
     }
   }
 
+  // Who this player could cook with: anyone leading their own kitchen. Someone
+  // already cooking with this player isn't offered — that's the same kitchen.
+  const canCookWith = season.players.filter(
+    (p) => p.id !== player.id && !p.householdId && p.householdId !== player.id
+  );
+  const cooksWith = player.householdId ?? "";
+
   return (
     <div className="manage-row">
       <input className="manage-input" value={name} onChange={(e) => setName(e.target.value)} onBlur={save} />
+      <select
+        className="manage-household"
+        value={cooksWith}
+        aria-label={t("season.cooksWith")}
+        onChange={(e) => store.setHousehold(season.id, player.id, e.target.value || undefined)}
+      >
+        <option value="">{t("season.cooksAlone")}</option>
+        {canCookWith.map((p) => (
+          <option key={p.id} value={p.id}>
+            {t("season.cooksWithName", { name: p.name })}
+          </option>
+        ))}
+      </select>
       <button
         type="button"
         className="btn btn-ghost btn-sm danger"
@@ -209,13 +230,14 @@ function SeasonManage({ season }: { season: SeasonModel }) {
               {season.players.map((p) => (
                 <PlayerRow
                   key={p.id}
-                  seasonId={season.id}
+                  season={season}
                   player={p}
                   canRemove={season.players.length > 2}
                   onRemove={() => removePlayer(p.id, p.name)}
                 />
               ))}
             </div>
+            <p className="muted small">{t("season.householdsHelp")}</p>
             <form className="manage-add-row" onSubmit={addPlayer}>
               <input
                 value={newPlayerName}
@@ -427,8 +449,8 @@ export default function Season() {
 
         <div className="schedule">
           {events.map((event) => {
-            const count = ratingsForEvent(event, ratings).length;
-            const isCook = !!myClaim && myClaim === event.hostId;
+            const count = householdVotes(event, season, ratings);
+            const isCook = isHostHousehold(season, event.hostId, myClaim);
             const canEdit = isOwner || isCook;
             return (
               <DinnerRow

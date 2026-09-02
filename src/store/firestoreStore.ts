@@ -15,6 +15,7 @@ import { auth, db } from "../lib/firebase";
 import type { Category, DinnerEvent, JoinTarget, Player, Rating, Season } from "../domain/types";
 import type { HostResult, RaterStats } from "../domain/scoring";
 import { compareEventDates } from "../domain/schedule";
+import { withHousehold, withoutPlayer, type RosterChange } from "../domain/households";
 import { genCode, genId } from "../domain/ids";
 import type { CodeState, DB, Store } from "./types";
 
@@ -187,6 +188,37 @@ export function createFirestoreStore(): Store {
     };
     if (event.mealDescription != null) data.mealDescription = event.mealDescription;
     return data;
+  }
+
+  /**
+   * Commit a roster edit: the new player list, plus the dinners that change
+   * hands with it. The domain works out what should happen so both backends
+   * agree; this just writes it.
+   */
+  function applyRoster(season: Season, change: RosterChange, where: string) {
+    const batch = writeBatch(fdb);
+    batch.update(doc(fdb, "seasons", season.id), { players: change.players });
+
+    for (const event of season.events) {
+      if (change.dropDinnerFor.includes(event.hostId)) {
+        batch.delete(doc(fdb, "seasons", season.id, "events", event.id));
+      } else if (change.rehost[event.hostId]) {
+        batch.update(doc(fdb, "seasons", season.id, "events", event.id), {
+          hostId: change.rehost[event.hostId],
+        });
+      }
+    }
+
+    for (const hostId of change.addDinnerFor) {
+      const event: DinnerEvent = { id: genId(), seasonId: season.id, hostId, code: genCode() };
+      batch.set(doc(fdb, "seasons", season.id, "events", event.id), {
+        ...eventDoc(event),
+        ownerId: season.ownerId,
+      });
+      batch.set(doc(fdb, "codes", event.code), { seasonId: season.id, eventId: event.id });
+    }
+
+    batch.commit().catch(onError(where));
   }
 
   /**
@@ -372,13 +404,12 @@ export function createFirestoreStore(): Store {
 
     removePlayer(seasonId: string, playerId: string) {
       const season = state.seasons.find((s) => s.id === seasonId);
-      if (!season) return;
-      const event = season.events.find((e) => e.hostId === playerId);
-      const players = season.players.filter((p) => p.id !== playerId);
-      const batch = writeBatch(fdb);
-      batch.update(doc(fdb, "seasons", seasonId), { players });
-      if (event) batch.delete(doc(fdb, "seasons", seasonId, "events", event.id));
-      batch.commit().catch(onError("removePlayer"));
+      if (season) applyRoster(season, withoutPlayer(season, playerId), "removePlayer");
+    },
+
+    setHousehold(seasonId: string, playerId: string, householdId: string | undefined) {
+      const season = state.seasons.find((s) => s.id === seasonId);
+      if (season) applyRoster(season, withHousehold(season, playerId, householdId), "setHousehold");
     },
 
     updateCategories(seasonId: string, categories: Category[]) {

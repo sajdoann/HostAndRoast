@@ -25,6 +25,8 @@ const LEGACY_CATEGORY_IDS = ["food", "atmosphere", "entertainment"];
 interface Player {
   id: string;
   name: string;
+  /** Set when this player cooks with another: one dinner, one shared vote. */
+  householdId?: string;
 }
 interface Category {
   id: string;
@@ -58,24 +60,66 @@ function categoryIdsFor(season: Season): string[] {
   return season.categories?.length ? season.categories.map((c) => c.id) : LEGACY_CATEGORY_IDS;
 }
 
+const householdIdOf = (p: Player) => p.householdId ?? p.id;
+
+/** "Anna & Petr" — a dinner belongs to the kitchen, not to one cook. */
+function hostNameOf(season: Season, hostId: string): string {
+  const host = season.players.find((p) => p.id === hostId);
+  if (!host) return "—";
+  const id = householdIdOf(host);
+  const members = season.players.filter((p) => householdIdOf(p) === id);
+  return members.map((p) => p.name).join(" & ") || "—";
+}
+
+/**
+ * Split each household's single vote between whoever in it rated: partners who
+ * both rated carry half each, one rating alone carries the full vote. Ratings
+ * from people no longer in the season are dropped.
+ */
+function weightRatings(season: Season, eventRatings: Rating[]) {
+  const byHousehold = new Map<string, Rating[]>();
+  for (const rating of eventRatings) {
+    const player = season.players.find((p) => p.id === rating.raterId);
+    if (!player) continue;
+    const id = householdIdOf(player);
+    const group = byHousehold.get(id);
+    if (group) group.push(rating);
+    else byHousehold.set(id, [rating]);
+  }
+  const weighted: { rating: Rating; weight: number }[] = [];
+  for (const group of byHousehold.values()) {
+    for (const rating of group) weighted.push({ rating, weight: 1 / group.length });
+  }
+  return weighted;
+}
+
+function weightedAverage(weighted: { rating: Rating; weight: number }[], cat: string): number {
+  let total = 0;
+  let weight = 0;
+  for (const { rating, weight: w } of weighted) {
+    const score = rating.scores[cat];
+    if (typeof score !== "number") continue;
+    total += score * w;
+    weight += w;
+  }
+  return weight === 0 ? 0 : total / weight;
+}
+
 const average = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const ratingsForEvent = (event: DinnerEvent, ratings: Rating[]) =>
   ratings.filter((r) => r.eventId === event.id);
 
-function computeStats(season: Season, ratings: Rating[]) {
+export function computeStats(season: Season, ratings: Rating[]) {
   const categoryIds = categoryIdsFor(season);
-  const nameOf = (id: string) => season.players.find((p) => p.id === id)?.name ?? "—";
+  const nameOf = (hostId: string) => hostNameOf(season, hostId);
 
   const board = season.events
     .map((event) => {
-      const eventRatings = ratingsForEvent(event, ratings);
+      const weighted = weightRatings(season, ratingsForEvent(event, ratings));
       const perCategory: Record<string, number> = {};
       for (const cat of categoryIds) {
-        const values = eventRatings
-          .map((r) => r.scores[cat])
-          .filter((v): v is number => typeof v === "number");
-        perCategory[cat] = round1(average(values));
+        perCategory[cat] = round1(weightedAverage(weighted, cat));
       }
       const total = round1(categoryIds.reduce((s, c) => s + perCategory[c], 0));
       return {
@@ -83,7 +127,8 @@ function computeStats(season: Season, ratings: Rating[]) {
         hostName: nameOf(event.hostId),
         perCategory,
         total,
-        ratingsCount: eventRatings.length,
+        // Each household's weights sum to 1, so this is kitchens, not heads.
+        ratingsCount: Math.round(weighted.reduce((sum, w) => sum + w.weight, 0)),
       };
     })
     .sort((a, b) => b.total - a.total);
