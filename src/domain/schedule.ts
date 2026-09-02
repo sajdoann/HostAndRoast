@@ -75,6 +75,7 @@ export function buildSchedule(
     id: genId(),
     seasonId,
     hostId: household.id,
+    hostIds: household.playerIds,
     date: addRecurrence(startDate, i, recurrence),
     code: genCode(),
   }));

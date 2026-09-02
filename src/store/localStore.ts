@@ -138,6 +138,7 @@ function createLocalStore(): Store {
               id: genId(),
               seasonId,
               hostId: player.id,
+              hostIds: [player.id],
               code: genCode(),
             },
           ],

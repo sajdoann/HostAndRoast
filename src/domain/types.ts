@@ -36,6 +36,15 @@ export interface DinnerEvent {
   code: string;
   /** The cook's menu for the night (set by the cook or organizer). */
   mealDescription?: string;
+  /** Where to go — a maps link (http/https only), set by the cook or organizer. */
+  locationUrl?: string;
+  /** The address or directions in words: "3rd floor, ring twice". */
+  locationNote?: string;
+  /**
+   * Everyone in the hosting household, denormalized so the security rules can
+   * let either partner edit their own dinner without looking up the roster.
+   */
+  hostIds?: string[];
 }
 
 /**

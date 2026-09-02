@@ -33,6 +33,17 @@ service cloud.firestore {
            == request.auth.uid;
     }
 
+    // True when the signed-in user cooks in the household hosting this dinner.
+    // `hostIds` is denormalized onto the event because rules can't search the
+    // roster for "which player is this account?". Unrolled rather than looped
+    // (rules have no loops); kitchens beyond four fall back to the lead cook.
+    function claimedByHost(sid, hostIds) {
+      return claimedBy(sid, hostIds[0])
+        || (hostIds.size() > 1 && claimedBy(sid, hostIds[1]))
+        || (hostIds.size() > 2 && claimedBy(sid, hostIds[2]))
+        || (hostIds.size() > 3 && claimedBy(sid, hostIds[3]));
+    }
+
     function isOwner(sid) {
       return request.auth != null
         && get(/databases/$(database)/documents/seasons/$(sid)).data.ownerId == request.auth.uid;
@@ -54,14 +65,17 @@ service cloud.firestore {
                       && request.resource.data.ownerId == request.auth.uid;
         allow delete: if request.auth != null
                       && resource.data.ownerId == request.auth.uid;
-        // Owner edits anything; the claimed cook edits only date/menu of their
-        // own dinner (hostId, code and ownerId must stay unchanged).
+        // Owner edits anything; anyone cooking that dinner edits only its
+        // date/menu/location (hostId, hostIds, code and ownerId stay put).
         allow update: if request.auth != null && (
           resource.data.ownerId == request.auth.uid
-          || ( claimedBy(sid, resource.data.hostId)
+          || ( ( claimedBy(sid, resource.data.hostId)
+                 || ( resource.data.hostIds is list
+                      && claimedByHost(sid, resource.data.hostIds) ) )
                && request.resource.data.hostId == resource.data.hostId
                && request.resource.data.code == resource.data.code
-               && request.resource.data.ownerId == resource.data.ownerId )
+               && request.resource.data.ownerId == resource.data.ownerId
+               && request.resource.data.hostIds == resource.data.hostIds )
         );
       }
 

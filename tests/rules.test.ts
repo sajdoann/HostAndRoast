@@ -25,6 +25,7 @@ const ALICE = "alice-uid";
 const MALLORY = "mallory-uid";
 const P_ALICE = "player-alice";
 const P_BOB = "player-bob";
+const P_CYRIL = "player-cyril";
 
 let testEnv: RulesTestEnvironment;
 
@@ -55,13 +56,15 @@ async function seed() {
       name: "Test season",
       ownerId: OWNER,
       players: [
-        { id: P_ALICE, name: "Alice" },
+        { id: P_ALICE, name: "Alice", householdId: P_BOB },
         { id: P_BOB, name: "Bob" },
+        { id: P_CYRIL, name: "Cyril" },
       ],
       createdAt: Date.now(),
     });
     await setDoc(doc(db, "seasons", SEASON, "events", "event1"), {
       hostId: P_BOB,
+      hostIds: [P_BOB, P_ALICE], // Bob and Alice cook together
       date: "2026-09-01",
       code: "ABC12",
       ownerId: OWNER,
@@ -200,9 +203,36 @@ describe("dinners", () => {
     );
   });
 
-  it("stops someone holding another nickname from editing a dinner", async () => {
+  it("lets the lead cook's partner edit their shared dinner", async () => {
     await seed();
-    await seedClaim(P_ALICE, MALLORY);
+    await seedClaim(P_ALICE, ALICE); // Alice holds the partner nickname, not the hostId
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(
+      updateDoc(doc(db, "seasons", SEASON, "events", "event1"), {
+        locationUrl: "https://maps.app.goo.gl/abc",
+        locationNote: "3rd floor",
+      })
+    );
+  });
+
+  it("stops a cook from reassigning their dinner or its kitchen", async () => {
+    await seed();
+    await seedClaim(P_BOB, ALICE);
+    const db = testEnv.authenticatedContext(ALICE).firestore();
+    await assertFails(
+      updateDoc(doc(db, "seasons", SEASON, "events", "event1"), { hostId: P_ALICE })
+    );
+    await assertFails(
+      updateDoc(doc(db, "seasons", SEASON, "events", "event1"), { hostIds: [P_ALICE] })
+    );
+    await assertFails(
+      updateDoc(doc(db, "seasons", SEASON, "events", "event1"), { code: "HACK1" })
+    );
+  });
+
+  it("stops someone outside the hosting kitchen from editing a dinner", async () => {
+    await seed();
+    await seedClaim(P_CYRIL, MALLORY);
     const db = testEnv.authenticatedContext(MALLORY).firestore();
     await assertFails(
       updateDoc(doc(db, "seasons", SEASON, "events", "event1"), { date: "2026-09-05" })

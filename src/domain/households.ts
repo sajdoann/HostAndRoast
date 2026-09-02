@@ -83,6 +83,16 @@ export function isHostHousehold(
   return householdMates(season, hostId).includes(playerId);
 }
 
+/**
+ * Everyone in the kitchen hosting this dinner. Stored on the event so the
+ * security rules can let either partner edit it — rules can't search the
+ * roster for "which player is this account?".
+ */
+export function hostIdsFor(season: Pick<Season, "players">, hostId: string): string[] {
+  const mates = householdMates(season, hostId);
+  return mates.length > 0 ? mates : [hostId];
+}
+
 /** Players who may rate a dinner: everyone outside the hosting kitchen. */
 export function ratersFor(season: Pick<Season, "players">, hostId: string): Player[] {
   const hosts = new Set(householdMates(season, hostId));
@@ -203,15 +213,21 @@ export function applyRosterChange(
   change: RosterChange,
   seasonId: string
 ): DinnerEvent[] {
+  const after = { players: change.players };
+
   const kept = events
     .filter((e) => !change.dropDinnerFor.includes(e.hostId))
-    .map((e) => (change.rehost[e.hostId] ? { ...e, hostId: change.rehost[e.hostId] } : e));
+    .map((e) => {
+      const hostId = change.rehost[e.hostId] ?? e.hostId;
+      return { ...e, hostId, hostIds: hostIdsFor(after, hostId) };
+    });
 
   const added = change.addDinnerFor.map((hostId) => ({
     id: genId(),
     seasonId,
     hostId,
     code: genCode(),
+    hostIds: hostIdsFor(after, hostId),
   }));
 
   return [...kept, ...added];

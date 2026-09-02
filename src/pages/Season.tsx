@@ -6,12 +6,14 @@ import { store } from "../store";
 import { useDB, useMyClaim, useSeasonView } from "../store/hooks";
 import Loading from "../components/Loading";
 import MenuModal from "../components/MenuModal";
+import LocationLine from "../components/LocationLine";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
 import { compareEventDates, todayISO } from "../domain/schedule";
 import { expectedRatings, householdVotes, revealStatus } from "../domain/reveal";
 import { categoriesFor } from "../domain/categories";
 import { hostNameOf, isHostHousehold } from "../domain/households";
+import { safeLocationUrl } from "../domain/location";
 import { genId } from "../domain/ids";
 import type { DinnerEvent, Player, Season as SeasonModel } from "../domain/types";
 
@@ -40,6 +42,8 @@ function DinnerRow({
 }) {
   const { t } = useI18n();
   const [meal, setMeal] = useState(event.mealDescription ?? "");
+  const [locationUrl, setLocationUrl] = useState(event.locationUrl ?? "");
+  const [locationNote, setLocationNote] = useState(event.locationNote ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
   const hostName = hostNameOf(season, event.hostId);
   const key = statusKey(event, season, ratingsCount);
@@ -48,6 +52,19 @@ function DinnerRow({
     if ((event.mealDescription ?? "") !== meal.trim()) {
       store.updateEvent(season.id, { ...event, mealDescription: meal.trim() });
     }
+  }
+
+  function saveLocation() {
+    // Keep whatever they typed, but only store a link we'd be willing to open.
+    const url = safeLocationUrl(locationUrl);
+    const note = locationNote.trim();
+    if ((event.locationUrl ?? "") === (url ?? "") && (event.locationNote ?? "") === note) return;
+    setLocationUrl(url ?? "");
+    store.updateEvent(season.id, {
+      ...event,
+      locationUrl: url,
+      locationNote: note || undefined,
+    });
   }
 
   return (
@@ -73,16 +90,34 @@ function DinnerRow({
       )}
 
       {canEdit ? (
-        <textarea
-          className="meal-input"
-          rows={3}
-          value={meal}
-          placeholder={t("season.mealPlaceholder")}
-          onChange={(e) => setMeal(e.target.value)}
-          onBlur={saveMeal}
-        />
+        <div className="dinner-details">
+          <textarea
+            className="meal-input"
+            rows={3}
+            value={meal}
+            placeholder={t("season.mealPlaceholder")}
+            onChange={(e) => setMeal(e.target.value)}
+            onBlur={saveMeal}
+          />
+          <input
+            className="location-input"
+            type="url"
+            inputMode="url"
+            value={locationUrl}
+            placeholder={t("season.locationUrlPlaceholder")}
+            onChange={(e) => setLocationUrl(e.target.value)}
+            onBlur={saveLocation}
+          />
+          <input
+            className="location-input"
+            value={locationNote}
+            placeholder={t("season.locationNotePlaceholder")}
+            onChange={(e) => setLocationNote(e.target.value)}
+            onBlur={saveLocation}
+          />
+        </div>
       ) : (
-        <span className="meal-text" />
+        <LocationLine event={event} />
       )}
 
       <div className="schedule-meta muted">

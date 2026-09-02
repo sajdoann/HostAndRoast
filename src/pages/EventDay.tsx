@@ -5,6 +5,7 @@ import Loading from "../components/Loading";
 import QRCode from "../components/QRCode";
 import CopyLink from "../components/CopyLink";
 import MenuCard from "../components/MenuCard";
+import LocationLine from "../components/LocationLine";
 import { hostNameOf, isHostHousehold } from "../domain/households";
 import { expectedRatings, householdVotes, isEventComplete } from "../domain/reveal";
 
@@ -44,6 +45,7 @@ export default function EventDay() {
       <div className="container center-narrow event-day">
         <p className="eyebrow">{t("event.title")}</p>
         <h1 className="section-title">{t("event.hostedBy", { host: hostName })}</h1>
+        <LocationLine event={event} className="location-line event-location" />
 
         {closed ? (
           <p className="event-closed">{t("event.closed")}</p>

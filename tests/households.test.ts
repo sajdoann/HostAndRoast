@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyRosterChange,
+  hostIdsFor,
   householdsOf,
   hostNameOf,
   isHostHousehold,
@@ -197,5 +199,47 @@ describe("roster edits", () => {
     const change = withoutPlayer(season(), "bara");
     expect(change.dropDinnerFor).toEqual(["bara"]);
     expect(householdsOf(change).map((h) => h.name)).toEqual(["Anna & Petr", "Cyril"]);
+  });
+});
+
+/**
+ * `hostIds` is what the security rules read to decide whether the account
+ * editing a dinner cooks it. If a roster edit leaves it stale, a partner's
+ * perfectly legitimate save is rejected by the server — so it has to track
+ * every pairing change, not just the ones that move a dinner.
+ */
+describe("hostIds stays in step with the kitchen", () => {
+  it("lists both cooks once a couple pairs up", () => {
+    const solo = { players: [{ id: "a", name: "A" }, { id: "b", name: "B" }] };
+    const change = withHousehold(solo, "b", "a");
+    const events = applyRosterChange([dinner("e_a", "a"), dinner("e_b", "b")], change, "s");
+
+    expect(events).toHaveLength(1); // B's dinner folded into A's kitchen
+    expect(events[0].hostIds!.slice().sort()).toEqual(["a", "b"]);
+  });
+
+  it("drops the departed partner when a couple splits", () => {
+    const change = withHousehold(season(), "petr", undefined);
+    const events = applyRosterChange([dinner("e_anna", "anna")], change, "s");
+
+    const annas = events.find((e) => e.hostId === "anna")!;
+    expect(annas.hostIds).toEqual(["anna"]); // Petr can no longer edit it
+    const petrs = events.find((e) => e.hostId === "petr")!;
+    expect(petrs.hostIds).toEqual(["petr"]); // and gets his own back
+  });
+
+  it("follows the dinner when the lead cook leaves the season", () => {
+    const change = withoutPlayer(season(), "anna");
+    const events = applyRosterChange([dinner("e_anna", "anna")], change, "s");
+
+    expect(events[0].hostId).toBe("petr");
+    expect(events[0].hostIds).toEqual(["petr"]); // Anna is gone, Petr cooks alone
+  });
+
+  it("agrees with the schedule builder for a brand-new season", () => {
+    const built = buildSchedule("s", season().players, "2026-01-01", { value: 1, unit: "week" });
+    for (const e of built) {
+      expect(e.hostIds!.slice().sort()).toEqual(hostIdsFor(season(), e.hostId).slice().sort());
+    }
   });
 });

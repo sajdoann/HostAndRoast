@@ -15,7 +15,12 @@ import { auth, db } from "../lib/firebase";
 import type { Category, DinnerEvent, JoinTarget, Player, Rating, Season } from "../domain/types";
 import type { HostResult, RaterStats } from "../domain/scoring";
 import { compareEventDates } from "../domain/schedule";
-import { withHousehold, withoutPlayer, type RosterChange } from "../domain/households";
+import {
+  hostIdsFor,
+  withHousehold,
+  withoutPlayer,
+  type RosterChange,
+} from "../domain/households";
 import { genCode, genId } from "../domain/ids";
 import type { CodeState, DB, Store } from "./types";
 
@@ -107,8 +112,15 @@ export function createFirestoreStore(): Store {
   function mapEvents(seasonId: string, snap: import("firebase/firestore").QuerySnapshot) {
     return snap.docs.map((d) => {
       const data = d.data() as Omit<DinnerEvent, "id" | "seasonId">;
-      // Firestore stores "no date" as null; normalize back to undefined.
-      return { id: d.id, seasonId, ...data, date: data.date ?? undefined } satisfies DinnerEvent;
+      // Firestore stores "not set" as null; normalize back to undefined.
+      return {
+        id: d.id,
+        seasonId,
+        ...data,
+        date: data.date ?? undefined,
+        locationUrl: data.locationUrl ?? undefined,
+        locationNote: data.locationNote ?? undefined,
+      } satisfies DinnerEvent;
     });
   }
 
@@ -183,10 +195,14 @@ export function createFirestoreStore(): Store {
   function eventDoc(event: DinnerEvent) {
     const data: Record<string, unknown> = {
       hostId: event.hostId,
+      // The whole hosting kitchen, so the rules can let either partner edit.
+      hostIds: event.hostIds ?? [event.hostId],
       date: event.date ?? null,
       code: event.code,
     };
     if (event.mealDescription != null) data.mealDescription = event.mealDescription;
+    if (event.locationUrl != null) data.locationUrl = event.locationUrl;
+    if (event.locationNote != null) data.locationNote = event.locationNote;
     return data;
   }
 
@@ -199,18 +215,29 @@ export function createFirestoreStore(): Store {
     const batch = writeBatch(fdb);
     batch.update(doc(fdb, "seasons", season.id), { players: change.players });
 
+    const after = { players: change.players };
     for (const event of season.events) {
       if (change.dropDinnerFor.includes(event.hostId)) {
         batch.delete(doc(fdb, "seasons", season.id, "events", event.id));
-      } else if (change.rehost[event.hostId]) {
-        batch.update(doc(fdb, "seasons", season.id, "events", event.id), {
-          hostId: change.rehost[event.hostId],
-        });
+        continue;
+      }
+      const hostId = change.rehost[event.hostId] ?? event.hostId;
+      const hostIds = hostIdsFor(after, hostId);
+      const sameHost = hostId === event.hostId;
+      const sameMembers = (event.hostIds ?? []).join() === hostIds.join();
+      if (!sameHost || !sameMembers) {
+        batch.update(doc(fdb, "seasons", season.id, "events", event.id), { hostId, hostIds });
       }
     }
 
     for (const hostId of change.addDinnerFor) {
-      const event: DinnerEvent = { id: genId(), seasonId: season.id, hostId, code: genCode() };
+      const event: DinnerEvent = {
+        id: genId(),
+        seasonId: season.id,
+        hostId,
+        hostIds: hostIdsFor(after, hostId),
+        code: genCode(),
+      };
       batch.set(doc(fdb, "seasons", season.id, "events", event.id), {
         ...eventDoc(event),
         ownerId: season.ownerId,
@@ -369,6 +396,8 @@ export function createFirestoreStore(): Store {
       void updateDoc(doc(fdb, "seasons", seasonId, "events", event.id), {
         date: event.date ?? null,
         mealDescription: event.mealDescription ?? null,
+        locationUrl: event.locationUrl ?? null,
+        locationNote: event.locationNote ?? null,
       }).catch(onError("updateEvent"));
     },
 
@@ -384,7 +413,13 @@ export function createFirestoreStore(): Store {
       const season = state.seasons.find((s) => s.id === seasonId);
       if (!season) return;
       const player: Player = { id: genId(), name };
-      const event: DinnerEvent = { id: genId(), seasonId, hostId: player.id, code: genCode() };
+      const event: DinnerEvent = {
+        id: genId(),
+        seasonId,
+        hostId: player.id,
+        hostIds: [player.id],
+        code: genCode(),
+      };
       const batch = writeBatch(fdb);
       batch.update(doc(fdb, "seasons", seasonId), { players: arrayUnion(player) });
       batch.set(doc(fdb, "seasons", seasonId, "events", event.id), {

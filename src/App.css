@@ -421,6 +421,48 @@ fieldset.field {
   white-space: nowrap;
 }
 
+/* Where the dinner is: a map link and/or directions in words. Stacked with
+   the menu so a row's editable fields stay in one grid cell. */
+.dinner-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.location-input {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  padding: 8px 12px;
+}
+.location-input:focus {
+  outline: 2px solid var(--gold-light);
+  border-color: var(--menu-gold);
+}
+.location-line {
+  min-width: 0;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.location-line a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* On the host-day page the line sits between the title and the rate button,
+   so it needs its own line rather than flowing beside them. */
+.event-location {
+  display: block;
+  margin: 0 0 14px;
+}
+/* The schedule grid needs the empty placeholder to hold its column; the
+   host-day page doesn't, so drop its margin when there's nothing to say. */
+.event-location:empty {
+  display: none;
+}
+
 /* Claim identity */
 .claim-box {
   padding: 16px 18px;
